@@ -59,13 +59,16 @@ The deploy step SSHes to your host and runs `deploy/update.sh`:
 
 ```
 git pull --ff-only        # the host's checkout (default /opt/sha2lato)
-docker compose -f compose/docker-compose.yml pull --ignore-pull-failures
+# mode-aware — the script detects it from compose/.env:
+#   build-on-host      → docker compose -f compose/docker-compose.yml build
+#   pull-from-registry → docker compose -f compose/docker-compose.yml pull
 docker compose -f compose/docker-compose.yml up -d --remove-orphans
 docker image prune -f
 ```
 
 - The host's git **`origin`** is the pull source — point it at whichever remote you treat as canonical (Forgejo or GitHub). Both pipelines can deploy the same host; deploys are serialized per workflow.
 - **Modes:** `deploy/update.sh` reads `compose/.env` and either rebuilds on the host (`sha2lato-agent:local`) or pulls the registry image (any other ref) before recreating the stack. CI deploys assume the pull-from-registry mode. See [configuration.md → Deployment modes](configuration.md#deployment-modes).
+- **Host-key hardening (optional):** the workflows pin the host key with `ssh-keyscan` at deploy time (trust-on-first-use). For stricter setups, store the host key in a repo secret and replace the `ssh-keyscan` line in `deploy.yml` / `.forgejo/workflows/ci.yml`.
 - If the host has local changes, `git pull --ff-only` fails loudly — that's intentional.
 - Override the checkout location with `SHA2LATO_DIR` (used by both `bootstrap-host.sh` and `update.sh`).
 

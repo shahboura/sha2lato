@@ -7,6 +7,17 @@ name: deploy
 
 on:
   workflow_call:
+    # Declared but not required: the job self-skips when they are unset,
+    # so forks stay green without configuration.
+    secrets:
+      DEPLOY_SSH_HOST:
+        required: false
+      DEPLOY_SSH_USER:
+        required: false
+      DEPLOY_SSH_KEY:
+        required: false
+      DEPLOY_SSH_PORT:
+        required: false
 
 permissions:
   contents: read
@@ -23,12 +34,14 @@ jobs:
         id: check
         env:
           HOST: ${{ secrets.DEPLOY_SSH_HOST }}
+          USER: ${{ secrets.DEPLOY_SSH_USER }}
+          KEY: ${{ secrets.DEPLOY_SSH_KEY }}
         run: |
-          if [ -n "$HOST" ]; then
+          if [ -n "$HOST" ] && [ -n "$USER" ] && [ -n "$KEY" ]; then
             echo "enabled=true" >> "$GITHUB_OUTPUT"
           else
             echo "enabled=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::DEPLOY_SSH_* secrets not configured — skipping deploy (expected on forks)."
+            echo "::notice::DEPLOY_SSH_* not (fully) configured — skipping deploy (expected on forks)."
           fi
 
       - name: Update the stack over SSH

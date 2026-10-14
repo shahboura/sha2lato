@@ -181,12 +181,14 @@ jobs:
         id: check
         env:
           HOST: ${{ secrets.DEPLOY_SSH_HOST }}
+          USER: ${{ secrets.DEPLOY_SSH_USER }}
+          KEY: ${{ secrets.DEPLOY_SSH_KEY }}
         run: |
-          if [ -n "$HOST" ]; then
+          if [ -n "$HOST" ] && [ -n "$USER" ] && [ -n "$KEY" ]; then
             echo "enabled=true" >> "$GITHUB_OUTPUT"
           else
             echo "enabled=false" >> "$GITHUB_OUTPUT"
-            echo "DEPLOY_SSH_* secrets not configured — skipping deploy."
+            echo "DEPLOY_SSH_* not (fully) configured — skipping deploy."
           fi
 
       - name: Update the stack over SSH

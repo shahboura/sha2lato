@@ -92,6 +92,10 @@ ufw --force enable    # default-deny everything else inbound
 
 ---
 
+## Security notes
+
+- **Privileged DinD:** the `dind` sidecar runs `privileged: true` — deliberately, since the agent builds and runs images. That is host-kernel-equivalent power: keep the host **single-tenant**, and control who can drive the agent with Discord roles ([discord-bot.md](discord-bot.md) → the `Kimaki` / `no-kimaki` roles).
+
 ## Sizing
 
 | Workload | Suggested |
@@ -103,7 +107,7 @@ ufw --force enable    # default-deny everything else inbound
 Notes:
 
 - CI builds do **not** run on this host (GitHub hosted runners / your Forgejo runner do that), so the box only needs to run the agent + DinD.
-- Disk: count on ~5–10 GB base + whatever your projects and images use. DinD keeps its own image store (the `dind-data` volume) — `docker compose ... exec dind docker image prune -af` occasionally if it grows.
+- Disk: count on ~5–10 GB base + whatever your projects and images use. DinD keeps its own image store (the `sha2lato-dind-data` volume) — `docker compose ... exec dind docker image prune -af` occasionally if it grows.
 - arm64 hosts (e.g. Azure Dpsv5/Dplsv5) are fully supported — the published images are multi-arch, and arm64 builds inside DinD run natively.
 
 ---

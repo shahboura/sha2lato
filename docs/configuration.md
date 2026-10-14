@@ -89,7 +89,7 @@ Defaults: `KIMAKI_VERSION=latest`, `UIPRO_VERSION=latest` (the weekly rebuild re
 | `compose/.env` image (mode switch) | `./deploy/update.sh` — it detects the mode and either rebuilds (build-on-host) or pulls (pull-from-registry) |
 | workflow pack switch | same command — no rebuild; the entrypoint converges the config on start |
 
-State — projects, sessions, model logins — always lives in the `agent-data` volume. Configuration changes never touch it.
+State — projects, sessions, model logins — always lives in the `sha2lato-agent-data` volume. Configuration changes never touch it.
 
 ## Pack-managed defaults
 

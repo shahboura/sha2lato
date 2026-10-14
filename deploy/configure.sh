@@ -23,7 +23,7 @@ usage() { sed -n '2,13p' "$0" | sed 's/^# \{0,1\}//'; }
 die() { echo "error: $*" >&2; exit 1; }
 
 get_val() {
-  v=$(grep -E "^$1=" "$2" 2>/dev/null | tail -n 1 | cut -d '=' -f 2- || true)
+  v=$(grep -E "^$1=" "$2" 2>/dev/null | tail -n 1 | cut -d '=' -f 2- | sed 's/[[:space:]]*#.*//' | tr -d '\r' || true)
   if [ -n "$v" ]; then printf '%s' "$v"; else printf '%s' "${3:-}"; fi
 }
 

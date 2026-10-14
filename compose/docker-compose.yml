@@ -44,6 +44,9 @@ services:
   dind:
     image: docker:29-dind
     restart: unless-stopped
+    # Privileged by design (the agent builds and runs images): this is
+    # host-kernel-equivalent power — keep the host single-tenant.
+    # See docs/hosting.md → Security notes.
     privileged: true
     # TLS daemon on 2376 (entrypoint default host/tls); certs into /certs
     command: ["--host=tcp://0.0.0.0:2376", "--tlsverify"]

@@ -120,8 +120,9 @@ cat <<EOF
        cd $TARGET_DIR && ./deploy/configure.sh
   2. Git SSH keys         add to $TARGET_DIR/secrets/ssh/       (docs/secrets.md)
   3. Registry image       edit $TARGET_DIR/compose/.env         (docs/ci-cd.md)
-  4. Start the stack:
+  4. Start the stack (build-on-host mode):
        cd $TARGET_DIR && docker compose -f compose/docker-compose.yml up -d --build
+     Later updates:  cd $TARGET_DIR && ./deploy/update.sh   (detects the mode)
   5. Authorize the bot in your server:
        cd $TARGET_DIR && docker compose -f compose/docker-compose.yml exec agent kimaki bot install-url
 

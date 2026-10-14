@@ -34,7 +34,7 @@ run() {
 # ── detect the deployment mode ──────────────────────────────────────────────
 IMAGE=""
 if [ -f compose/.env ]; then
-  IMAGE=$(grep -E '^SHA2LATO_AGENT_IMAGE=' compose/.env 2>/dev/null | tail -n 1 | cut -d '=' -f 2- || true)
+  IMAGE=$(grep -E '^SHA2LATO_AGENT_IMAGE=' compose/.env 2>/dev/null | tail -n 1 | cut -d '=' -f 2- | sed 's/[[:space:]]*#.*//' | tr -d ' \r' || true)
 fi
 if [ -z "$IMAGE" ]; then IMAGE="sha2lato-agent:local"; fi
 

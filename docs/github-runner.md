@@ -36,6 +36,6 @@ The runner service mounts the host Docker socket so jobs using `docker` (like th
 
 - The runner image ([myoung34/github-runner](https://github.com/myoung34/docker-github-actions-runner), GPL-3.0) is pulled from Docker Hub by you — it's not redistributed by this repo.
 - To keep a profile-enabled runner running after `./deploy/update.sh`, set `COMPOSE_PROFILES=github-runner` in `compose/.env` so every compose invocation includes it.
-- Unregistering: stop the container and remove the runner in the repo/org settings; its data volume (`github-runner-data`) can be deleted.
+- Unregistering: stop the container and remove the runner in the repo/org settings; its data volume (`sha2lato-github-runner-data`) can be deleted.
 
 Docs index: [README](README.md).

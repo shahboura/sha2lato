@@ -22,6 +22,7 @@ docker compose -f compose/docker-compose.yml exec agent kimaki status
 | Healthcheck reports **unhealthy** | `kimaki status` inside the container shows *why not running*; usually the same token issue as row 1 |
 | `AGENT_PACK` / `PONYTAIL` / `GRAPHIFY` set but the feature isn't active | `docker compose -f compose/docker-compose.yml logs agent \| grep entrypoint` — the convergence lines print on every start. `agents-opencode`: delete the marker `/data/opencode/config/.agents-opencode-installed` and restart to reinstall. `ponytail`: OpenCode fetches the plugin on first start — needs network once. `graphify`: verify the CLI with `docker compose -f compose/docker-compose.yml exec agent graphify --help` |
 | `graphify: command not found` inside the container | Should not happen (the CLI is baked into the image) — rebuild the image; the entrypoint never removes it, only the usage guide |
+| Bot online but auth/model errors, token looks correct | `secrets/.env.agent` may have Windows CRLF endings — values then carry a stray `\r`. Rewrite the file with LF endings (or re-run `./deploy/configure.sh`). |
 
 ## Docker-in-Docker (agent builds)
 

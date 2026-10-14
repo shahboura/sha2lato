@@ -38,9 +38,10 @@ weekly CVE-fresh rebuilds. Public repo (MIT), fork-friendly.
 
 ## Current state
 
-Complete and review-gated (3 adversarial cycles + parallel-agent validation,
-all findings resolved): agent image (kimaki + opencode 2 + ui-ux-pro-max +
-agents-opencode pack, plus ponytail and graphify) built down to ~1.6 GB,
+Complete and review-gated (4 adversarial cycles incl. a dedicated security
+pass, plus parallel-agent validation; all findings resolved): agent image
+(kimaki + opencode 2 + ui-ux-pro-max + agents-opencode pack, plus ponytail and
+graphify) built down to ~1.6 GB,
 compose stack (agent + DinD, explicit volume names), secrets + age overlay,
 GitHub + Forgejo CI (multi-arch, weekly rebuild, fork-safe), host
 bootstrap/update/configure scripts, 10 scoped docs. `AGENT_PACK` defaults to
@@ -93,3 +94,11 @@ Commits may be SSH-signed (git ≥ 2.34: `gpg.format ssh` + `user.signingkey` +
   managers), and `docs/arcane.md` (running under a Docker management UI —
   two recipes + one-owner rule). Forgejo leg deferred; firewall/SSH flags
   still parked.
+- **2026-10-14 (session 1, continued 3):** Cycle-4 review (adversarial +
+  security in parallel): no blockers; `opencode debug config` empirically
+  confirmed OpenCode v2 honors the pack/permission config (resolves to the
+  normalized `permissions` array), and V2's global config path is the volume
+  path. Fixes: Arcane token-in-store warning, mode-aware bootstrap banner +
+  ci-cd pseudocode, CRLF trimming in the scripts, real volume names in docs,
+  privileged-DinD notes, least-privilege workflow secret passing. Security
+  audit: only `.example` files tracked, tree clean.

@@ -17,6 +17,8 @@ Mount Arcane's `PROJECTS_DIRECTORY` so the **parent of the repo checkout** is in
 
 Create a project in Arcane and paste this compose (registry mode). Put `KIMAKI_BOT_TOKEN`, `MACHINE_NAME`, `AGENT_PACK`, `PONYTAIL`, `GRAPHIFY` in the project's **Environment Configuration (.env)** editor, and create `secrets-ssh/` via the **Workspace** only if the agent needs git over SSH.
 
+> ⚠️ **The token then lives in Arcane's store.** Arcane keeps project `.env` files in its own database — anyone with Arcane UI access can read them — and may include them in backups or exports. Treat that entry as a secret, **never** point a Push Git Sync or an export at it, and prefer **Recipe 1** (the token stays in the host's gitignored `secrets/.env.agent`). Same rule as [secrets.md](secrets.md): secrets never reach a repository.
+
 ```yaml
 name: sha2lato
 services:
