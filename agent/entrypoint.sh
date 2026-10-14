@@ -166,12 +166,14 @@ esac
 # with GIT_USER_NAME/GIT_USER_EMAIL. GIT_SIGN=1 enables SSH commit signing
 # when /root/.ssh/signing_key exists — add signing_key.pub as a Signing Key
 # on GitHub / your Forgejo account. See docs/usage.md → "Commits from the agent".
-# Combined key=value form: safe even if the value starts with a dash.
+# Two-arg form (empirically verified: handles values with leading dashes;
+# the `name=value` single-arg form is rejected by git config). Failures warn
+# and continue rather than aborting the entrypoint.
 if [ -n "${GIT_USER_NAME:-}" ]; then
-  git config --system "user.name=$GIT_USER_NAME" || echo "[entrypoint] WARNING: invalid GIT_USER_NAME (ignored)" >&2
+  git config --system user.name "$GIT_USER_NAME" || echo "[entrypoint] WARNING: could not set GIT_USER_NAME (ignored)" >&2
 fi
 if [ -n "${GIT_USER_EMAIL:-}" ]; then
-  git config --system "user.email=$GIT_USER_EMAIL" || echo "[entrypoint] WARNING: invalid GIT_USER_EMAIL (ignored)" >&2
+  git config --system user.email "$GIT_USER_EMAIL" || echo "[entrypoint] WARNING: could not set GIT_USER_EMAIL (ignored)" >&2
 fi
 case "${GIT_SIGN:-0}" in
   1|on|true)
