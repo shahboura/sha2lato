@@ -20,7 +20,8 @@ docker compose -f compose/docker-compose.yml exec agent kimaki status
 | Need to restart just the bot | `docker compose -f compose/docker-compose.yml exec agent kimaki restart` (sessions keep running) |
 | Where are the logs? | `… exec agent kimaki logs` → path (`/data/kimaki.log`); follow with `--follow`. The file resets on every bot start |
 | Healthcheck reports **unhealthy** | `kimaki status` inside the container shows *why not running*; usually the same token issue as row 1 |
-| `AGENT_PACK` set but the pack isn't active | `docker compose -f compose/docker-compose.yml logs agent \| grep entrypoint` — the installer lines appear at every start; for `agents-opencode`, delete the marker `/data/opencode/config/.agents-opencode-installed` and restart to reinstall |
+| `AGENT_PACK` / `PONYTAIL` / `GRAPHIFY` set but the feature isn't active | `docker compose -f compose/docker-compose.yml logs agent \| grep entrypoint` — the convergence lines print on every start. `agents-opencode`: delete the marker `/data/opencode/config/.agents-opencode-installed` and restart to reinstall. `ponytail`: OpenCode fetches the plugin on first start — needs network once. `graphify`: verify the CLI with `docker compose -f compose/docker-compose.yml exec agent graphify --help` |
+| `graphify: command not found` inside the container | Should not happen (the CLI is baked into the image) — rebuild the image; the entrypoint never removes it, only the usage guide |
 
 ## Docker-in-Docker (agent builds)
 

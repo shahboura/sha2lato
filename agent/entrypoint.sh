@@ -9,23 +9,37 @@
 set -e
 
 # ── Sync baked skills into the global OpenCode skills dir ──────────────────
-# /opt/skills is baked into the image (ui-ux-pro-max); the target lives on
-# the /data volume. Copy only — never delete — so user-added skills survive
-# and image rebuilds still refresh the baked ones.
-SKILLS_SRC="/opt/skills"
+# ui-ux-pro-max: always on. graphify usage guide: gated by GRAPHIFY
+# (default 1; set 0/off/false to disable — removes it from the volume too).
+# Copy-only for enabled skills; user-added skills are never touched.
 SKILLS_DST="${XDG_CONFIG_HOME:-/data/opencode/config}/opencode/skills"
-if [ -d "$SKILLS_SRC" ] && [ -n "$(ls -A "$SKILLS_SRC" 2>/dev/null)" ]; then
-  mkdir -p "$SKILLS_DST"
-  cp -r "$SKILLS_SRC"/. "$SKILLS_DST"/
-  echo "[entrypoint] synced baked skills -> $SKILLS_DST"
-fi
+mkdir -p "$SKILLS_DST"
 
-# ── Optional: agent workflow pack (AGENT_PACK — mutually exclusive) ────────
-# AGENT_PACK=agents-opencode → installs the baked-in agents-opencode pack
-#   (all languages) into the global OpenCode config on first start.
+sync_skills() {
+  if [ -d "$1" ] && [ -n "$(ls -A "$1" 2>/dev/null)" ]; then
+    cp -r "$1"/. "$SKILLS_DST"/
+    echo "[entrypoint] synced $2 skills -> $SKILLS_DST"
+  fi
+}
+
+sync_skills /opt/skills "ui-ux-pro-max"
+case "${GRAPHIFY:-1}" in
+  0|off|false)
+    rm -rf "$SKILLS_DST/graphify-usage"
+    echo "[entrypoint] graphify guide disabled (GRAPHIFY=$GRAPHIFY)"
+    ;;
+  *)
+    sync_skills /opt/skills-graphify "graphify guide"
+    ;;
+esac
+
+# ── Agent workflow pack (AGENT_PACK — mutually exclusive, one workflow) ────
+# AGENT_PACK=agents-opencode (DEFAULT) → installs the baked-in
+#   agents-opencode pack (all languages) into the global OpenCode config.
 # AGENT_PACK=superpowers → merges the Superpowers plugin line into
 #   opencode.json (SUPERPOWERS_TAG, default v7.0.0; needs >= v6.4.1 on v2).
-# empty/unset → no pack. One variable = exclusivity by construction.
+# AGENT_PACK=none → no workflow pack.
+# One variable = exclusivity by construction.
 # superpowers manages git worktrees itself: keep KIMAKI_WORKTREES unset.
 CONF_DIR="${XDG_CONFIG_HOME:-/data/opencode/config}/opencode"
 CONF="$CONF_DIR/opencode.json"
@@ -39,7 +53,7 @@ if [ ! -L /root/.config/opencode ]; then
   ln -s "$CONF_DIR" /root/.config/opencode
 fi
 
-case "${AGENT_PACK:-}" in
+case "${AGENT_PACK:-agents-opencode}" in
   agents-opencode)
     # enforce pack exclusivity at config level: drop superpowers plugin entries
     if [ -f "$CONF" ] && command -v jq >/dev/null 2>&1; then
@@ -103,10 +117,47 @@ case "${AGENT_PACK:-}" in
       echo "[entrypoint] WARNING: KIMAKI_WORKTREES is set — superpowers manages git worktrees itself; leave Kimaki worktrees OFF" >&2
     fi
     ;;
-  "")
+  none)
+    echo "[entrypoint] workflow pack disabled (AGENT_PACK=none)"
     ;;
   *)
-    echo "[entrypoint] WARNING: unknown AGENT_PACK='${AGENT_PACK}' — expected agents-opencode or superpowers; ignoring" >&2
+    echo "[entrypoint] WARNING: unknown AGENT_PACK='${AGENT_PACK}' — expected agents-opencode, superpowers, or none; ignoring" >&2
+    ;;
+esac
+
+# ── Ponytail discipline plugin (PONYTAIL, default on) ──────────────────────
+# Injects the minimal-code ruleset every turn plus /ponytail commands.
+# Set PONYTAIL=0/off/false to strip it from the config.
+PONYTAIL_SPEC="${PONYTAIL_SPEC:-@dietrichgebert/ponytail@5.2.0}"
+case "${PONYTAIL:-1}" in
+  0|off|false)
+    if [ -f "$CONF" ] && command -v jq >/dev/null 2>&1; then
+      TMP="$(mktemp)"
+      if jq '.plugins = ((.plugins // []) | map(select((type == "string" and startswith("@dietrichgebert/ponytail@")) | not)))' "$CONF" > "$TMP"; then
+        mv "$TMP" "$CONF"
+      else
+        rm -f "$TMP"
+      fi
+    fi
+    echo "[entrypoint] ponytail disabled (PONYTAIL=$PONYTAIL)"
+    ;;
+  *)
+    mkdir -p "$CONF_DIR"
+    if [ ! -f "$CONF" ]; then
+      printf '{\n  "plugins": ["%s"]\n}\n' "$PONYTAIL_SPEC" > "$CONF"
+      echo "[entrypoint] ponytail plugin enabled (created $CONF)"
+    elif command -v jq >/dev/null 2>&1; then
+      TMP="$(mktemp)"
+      if jq --arg spec "$PONYTAIL_SPEC" '.plugins = ((.plugins // []) | if index($spec) then . else . + [$spec] end)' "$CONF" > "$TMP"; then
+        mv "$TMP" "$CONF"
+        echo "[entrypoint] ponytail plugin enabled (merged into $CONF)"
+      else
+        rm -f "$TMP"
+        echo "[entrypoint] WARNING: could not update $CONF for ponytail" >&2
+      fi
+    else
+      echo "[entrypoint] WARNING: jq unavailable — add $PONYTAIL_SPEC to $CONF manually" >&2
+    fi
     ;;
 esac
 

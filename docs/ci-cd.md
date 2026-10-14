@@ -76,6 +76,8 @@ docker image prune -f
 | Base image + system packages | Weekly rebuild pulls the newest `node:24-slim` and apt state; both pipelines republish `:latest` and deploy |
 | kimaki / ui-ux-pro-max-cli (npm) | Installed `@latest` at build time — the weekly rebuild refreshes them. Build args can pin versions for reproducible builds instead |
 | agents-opencode pack (npm) | Pinned via the `AGENTS_OPENCODE_VERSION` build arg (**manual bump** — Renovate doesn't manage npm installs inside the Dockerfile). After a bump + rebuild, the entrypoint auto-updates the installed pack on the volume (version-tracked marker) |
+| graphify CLI (pip `graphifyy`) | Pinned via `GRAPHIFY_VERSION` (manual bump); optional backends via `GRAPHIFY_EXTRAS` (empty = core only). Installed into its own venv at build time |
+| ponytail plugin (npm) | Pinned in the entrypoint (`PONYTAIL_SPEC`, default `@dietrichgebert/ponytail@5.2.0`); OpenCode fetches it on first start — bump the spec to update |
 | OpenCode | Installed from the official v2 install script at build time (Kimaki requires ≥ 2.0.19; it never pins) |
 | CI actions (`actions/*`, `docker/*`) | Renovate PRs (pinned to digests) |
 | Docker images (base, dind, linters) | Renovate PRs for the reference tags; **linter images are additionally pinned `tag@digest`** — see below |
@@ -100,6 +102,7 @@ Everything this repo builds or runs is pinned or first-party, and was verified a
 
 - **Agent image**: base `node:24-slim` (Docker Official); Docker CLI/buildx/compose from Docker's official apt repo; [kimaki](https://github.com/remorses/kimaki) (MIT), [ui-ux-pro-max-cli](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill) (MIT), [OpenCode](https://github.com/anomalyco/opencode) (MIT) from their official release channels.
 - **Workflow pack**: [agents-opencode](https://github.com/shahboura/agents-opencode) (MIT; npm `agents-opencode@2.6.0` pinned via build arg; npm provenance attestations via GitHub Actions OIDC trusted publishing).
+- **Extras**: [ponytail](https://github.com/DietrichGebert/ponytail) (MIT; npm plugin, pinned spec) and [graphify](https://github.com/Graphify-Labs/graphify) (Apache-2.0; PyPI `graphifyy`, pure-Python wheel, pinned build arg).
 - **CI tooling**: actionlint (MIT), hadolint (GPL-3.0), shellcheck (GPL-3.0) — GPL tools are invoked as separate processes only; nothing is linked or redistributed. All three pinned by digest.
 - **Forgejo job image**: Docker Official `node:24-bookworm` + Docker's apt repo (official-only reference); community act image documented as an alternative.
 - **Optional GitHub runner**: [myoung34/github-runner](https://github.com/myoung34/docker-github-actions-runner) (GPL-3.0 — user-pulled image, not redistributed).

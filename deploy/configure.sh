@@ -3,8 +3,9 @@
 #
 # Interactive:      ./deploy/configure.sh
 # Non-interactive:  ./deploy/configure.sh --token <t> [--machine <m>]
-#                   [--pack none|agents-opencode|superpowers]
-#                   [--worktrees on|off] [--image <ref>]
+#                   [--pack agents-opencode|superpowers|none]
+#                   [--worktrees on|off] [--ponytail on|off] [--graphify on|off]
+#                   [--image <ref>]
 # Show current:     ./deploy/configure.sh --show
 #
 # Writes secrets/.env.agent (chmod 600) and compose/.env.
@@ -18,7 +19,7 @@ AGENT_EX="$REPO_ROOT/secrets/.env.agent.example"
 COMPOSE_ENV="$REPO_ROOT/compose/.env"
 COMPOSE_EX="$REPO_ROOT/compose/.env.example"
 
-usage() { sed -n '2,12p' "$0" | sed 's/^# \{0,1\}//'; }
+usage() { sed -n '2,13p' "$0" | sed 's/^# \{0,1\}//'; }
 die() { echo "error: $*" >&2; exit 1; }
 
 get_val() {
@@ -47,7 +48,7 @@ ask() {
   printf '%s' "$_ans"
 }
 
-TOKEN="" MACHINE="" PACK="" WORKTREES="" IMAGE="" MODE="interactive"
+TOKEN="" MACHINE="" PACK="" WORKTREES="" PONYTAIL="" GRAPHIFY="" IMAGE="" MODE="interactive"
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -55,6 +56,8 @@ while [ $# -gt 0 ]; do
     --machine) [ $# -ge 2 ] || die "--machine needs a value"; MACHINE="$2"; shift 2 ;;
     --pack) [ $# -ge 2 ] || die "--pack needs a value"; PACK="$2"; shift 2 ;;
     --worktrees) [ $# -ge 2 ] || die "--worktrees needs a value"; WORKTREES="$2"; shift 2 ;;
+    --ponytail) [ $# -ge 2 ] || die "--ponytail needs a value"; PONYTAIL="$2"; shift 2 ;;
+    --graphify) [ $# -ge 2 ] || die "--graphify needs a value"; GRAPHIFY="$2"; shift 2 ;;
     --image) [ $# -ge 2 ] || die "--image needs a value"; IMAGE="$2"; shift 2 ;;
     --show) MODE="show"; shift ;;
     --non-interactive) MODE="noninteractive"; shift ;;
@@ -74,14 +77,18 @@ CUR_TOKEN=$(get_val KIMAKI_BOT_TOKEN "$AGENT_ENV" "")
 CUR_MACHINE=$(get_val MACHINE_NAME "$AGENT_ENV" "sha2lato")
 CUR_PACK=$(get_val AGENT_PACK "$AGENT_ENV" "")
 CUR_WT=$(get_val KIMAKI_WORKTREES "$AGENT_ENV" "")
+CUR_PONYTAIL=$(get_val PONYTAIL "$AGENT_ENV" "")
+CUR_GRAPHIFY=$(get_val GRAPHIFY "$AGENT_ENV" "")
 CUR_IMAGE=$(get_val SHA2LATO_AGENT_IMAGE "$COMPOSE_ENV" "sha2lato-agent:local")
 
 if [ "$MODE" = "show" ]; then
   printf 'secrets/.env.agent:\n'
   printf '  KIMAKI_BOT_TOKEN:  %s\n' "$([ -n "$CUR_TOKEN" ] && echo set || echo 'NOT SET')"
   printf '  MACHINE_NAME:      %s\n' "$CUR_MACHINE"
-  printf '  AGENT_PACK:        %s\n' "${CUR_PACK:-(none)}"
+  printf '  AGENT_PACK:        %s\n' "${CUR_PACK:-agents-opencode}"
   printf '  KIMAKI_WORKTREES:  %s\n' "$([ -n "$CUR_WT" ] && echo on || echo off)"
+  printf '  PONYTAIL:          %s\n' "$([ "$CUR_PONYTAIL" = "0" ] && echo off || echo on)"
+  printf '  GRAPHIFY:          %s\n' "$([ "$CUR_GRAPHIFY" = "0" ] && echo off || echo on)"
   printf 'compose/.env:\n'
   printf '  SHA2LATO_AGENT_IMAGE: %s\n' "$CUR_IMAGE"
   exit 0
@@ -108,17 +115,17 @@ if [ "$MODE" = "interactive" ]; then
   [ -n "$MACHINE" ] || MACHINE=$(ask "Machine name (Discord category becomes 'Kimaki <name>')" "$CUR_MACHINE")
 
   if [ -z "$PACK" ]; then
-    printf 'Workflow pack:\n  1) none\n  2) agents-opencode (agent roster + slash commands)\n  3) superpowers (plan-first methodology)\n' >&2
+    printf 'Workflow pack:\n  1) agents-opencode (agent roster + slash commands) [default]\n  2) superpowers (plan-first methodology)\n  3) none\n' >&2
     pack_default=1
     case "$CUR_PACK" in
-      agents-opencode) pack_default=2 ;;
-      superpowers) pack_default=3 ;;
+      superpowers) pack_default=2 ;;
+      none) pack_default=3 ;;
     esac
     PACK_ANS=$(ask "Choose 1-3" "$pack_default")
     case "$PACK_ANS" in
-      2) PACK="agents-opencode" ;;
-      3) PACK="superpowers" ;;
-      *) PACK="" ;;
+      2) PACK="superpowers" ;;
+      3) PACK="none" ;;
+      *) PACK="agents-opencode" ;;
     esac
   fi
 
@@ -131,24 +138,52 @@ if [ "$MODE" = "interactive" ]; then
     WT_ANS=$(ask "Kimaki worktrees (fresh git worktree per session)? y/N" "$wt_default")
     case "$WT_ANS" in y|Y|yes|YES) WORKTREES="1" ;; *) WORKTREES="" ;; esac
   fi
+
+  if [ -z "$PONYTAIL" ]; then
+    pt_default=y
+    if [ "$CUR_PONYTAIL" = "0" ]; then pt_default=n; fi
+    PT_ANS=$(ask "Ponytail minimal-code discipline plugin? y/N" "$pt_default")
+    case "$PT_ANS" in n|N|no|NO) PONYTAIL="0" ;; *) PONYTAIL="1" ;; esac
+  fi
+
+  if [ -z "$GRAPHIFY" ]; then
+    gf_default=y
+    if [ "$CUR_GRAPHIFY" = "0" ]; then gf_default=n; fi
+    GF_ANS=$(ask "Graphify repo knowledge graphs? y/N" "$gf_default")
+    case "$GF_ANS" in n|N|no|NO) GRAPHIFY="0" ;; *) GRAPHIFY="1" ;; esac
+  fi
 fi
 
-# Fill missing non-interactive values from the current config
+# Fill missing non-interactive values from the current config / defaults
 [ -n "$TOKEN" ] || TOKEN="$CUR_TOKEN"
 [ -n "$MACHINE" ] || MACHINE="$CUR_MACHINE"
-[ -n "$PACK" ] || PACK="$CUR_PACK"
+if [ -z "$PACK" ]; then PACK="$CUR_PACK"; fi
+if [ -z "$PACK" ]; then PACK="agents-opencode"; fi
 [ -n "$IMAGE" ] || IMAGE="$CUR_IMAGE"
 if [ -z "$WORKTREES" ]; then WORKTREES="$CUR_WT"; fi
+if [ -z "$PONYTAIL" ]; then PONYTAIL="$CUR_PONYTAIL"; fi
+if [ -z "$PONYTAIL" ]; then PONYTAIL="1"; fi
+if [ -z "$GRAPHIFY" ]; then GRAPHIFY="$CUR_GRAPHIFY"; fi
+if [ -z "$GRAPHIFY" ]; then GRAPHIFY="1"; fi
 
 case "$PACK" in
-  ""|agents-opencode|superpowers) ;;
-  none) PACK="" ;;
-  *) die "invalid --pack '$PACK' (none|agents-opencode|superpowers)" ;;
+  agents-opencode|superpowers|none) ;;
+  *) die "invalid --pack '$PACK' (agents-opencode|superpowers|none)" ;;
 esac
 case "$WORKTREES" in
   ""|off|0) WORKTREES="" ;;
   on|1) WORKTREES="1" ;;
   *) die "invalid --worktrees '$WORKTREES' (on|off)" ;;
+esac
+case "$PONYTAIL" in
+  1|on) PONYTAIL="1" ;;
+  0|off) PONYTAIL="0" ;;
+  *) die "invalid --ponytail '$PONYTAIL' (on|off)" ;;
+esac
+case "$GRAPHIFY" in
+  1|on) GRAPHIFY="1" ;;
+  0|off) GRAPHIFY="0" ;;
+  *) die "invalid --graphify '$GRAPHIFY' (on|off)" ;;
 esac
 if [ "$PACK" = "superpowers" ] && [ -n "$WORKTREES" ]; then
   printf 'note: superpowers manages git worktrees itself — forcing Kimaki worktrees off\n' >&2
@@ -160,14 +195,22 @@ set_val KIMAKI_BOT_TOKEN "$TOKEN" "$AGENT_ENV"
 set_val MACHINE_NAME "$MACHINE" "$AGENT_ENV"
 set_val AGENT_PACK "$PACK" "$AGENT_ENV"
 set_val KIMAKI_WORKTREES "$WORKTREES" "$AGENT_ENV"
+set_val PONYTAIL "$PONYTAIL" "$AGENT_ENV"
+set_val GRAPHIFY "$GRAPHIFY" "$AGENT_ENV"
 set_val SHA2LATO_AGENT_IMAGE "$IMAGE" "$COMPOSE_ENV"
 chmod 600 "$AGENT_ENV" 2>/dev/null || true
 
 WT_LABEL=off
 if [ -n "$WORKTREES" ]; then WT_LABEL=on; fi
+PT_LABEL=off
+if [ "$PONYTAIL" = "1" ]; then PT_LABEL=on; fi
+GF_LABEL=off
+if [ "$GRAPHIFY" = "1" ]; then GF_LABEL=on; fi
+
 printf '\nsaved:\n'
 printf '  secrets/.env.agent  token: %s | machine: %s | pack: %s | worktrees: %s\n' \
-  "$([ -n "$TOKEN" ] && echo set || echo empty)" "$MACHINE" "${PACK:-(none)}" "$WT_LABEL"
+  "$([ -n "$TOKEN" ] && echo set || echo empty)" "$MACHINE" "$PACK" "$WT_LABEL"
+printf '  extras              ponytail: %s | graphify: %s\n' "$PT_LABEL" "$GF_LABEL"
 printf '  compose/.env        image: %s\n' "$IMAGE"
 printf '\napply:  docker compose -f compose/docker-compose.yml up -d\n'
 printf 'then, in Discord, run /login once to connect a model.\n'

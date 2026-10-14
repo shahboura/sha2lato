@@ -19,6 +19,9 @@ ARG DEBIAN_FRONTEND=noninteractive
 ARG KIMAKI_VERSION=latest
 ARG UIPRO_VERSION=latest
 ARG AGENTS_OPENCODE_VERSION=2.6.0
+ARG GRAPHIFY_VERSION=0.9.90
+# Optional graphify backends, comma-separated (e.g. "leiden,mcp"); empty = core only
+ARG GRAPHIFY_EXTRAS=
 
 # bash with pipefail for every RUN env (predictable failures on pipes)
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
@@ -34,7 +37,7 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN set -eux; \
     apt-get update; \
     apt-get install -y --no-install-recommends \
-        ca-certificates curl git openssh-client unzip python3 jq; \
+        ca-certificates curl git openssh-client unzip python3 python3-venv jq; \
     install -m 0755 -d /etc/apt/keyrings; \
     curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc; \
     chmod a+r /etc/apt/keyrings/docker.asc; \
@@ -47,7 +50,11 @@ RUN set -eux; \
     rm -rf /var/lib/apt/lists/*
 
 # ── Kimaki + ui-ux-pro-max CLI + agents-opencode pack ──────────────────────
-RUN npm install -g kimaki@${KIMAKI_VERSION} ui-ux-pro-max-cli@${UIPRO_VERSION} agents-opencode@${AGENTS_OPENCODE_VERSION}
+# The npm cache is purged in the SAME layer: Docker layers are additive, so a
+# later `rm` would not reclaim it — without this it adds ~680 MB to the image.
+RUN npm install -g kimaki@${KIMAKI_VERSION} ui-ux-pro-max-cli@${UIPRO_VERSION} agents-opencode@${AGENTS_OPENCODE_VERSION} \
+    && npm cache clean --force \
+    && rm -rf /root/.npm
 
 # ── OpenCode 2 (kimaki requires >= 2.0.19) ─────────────────────────────────
 RUN curl -fsSL https://opencode.ai/v2/install | bash
@@ -77,8 +84,30 @@ RUN --mount=type=tmpfs,target=/build set -eux; \
     done; \
     test -n "$(find /opt/skills -name 'SKILL.md' -print -quit)"
 
+# ── Bake graphify (code → queryable knowledge graph CLI) ───────────────────
+# Pure-Python wheel (py3-none-any), installed into its own venv because
+# Debian is PEP 668 externally-managed. Exposed on PATH as `graphify`.
+# GRAPHIFY_EXTRAS pulls optional backends at build time (leiden, mcp, ...).
+RUN set -eux; \
+    python3 -m venv /opt/graphify; \
+    if [ -n "${GRAPHIFY_EXTRAS}" ]; then \
+        SPEC="graphifyy[${GRAPHIFY_EXTRAS}]==${GRAPHIFY_VERSION}"; \
+    else \
+        SPEC="graphifyy==${GRAPHIFY_VERSION}"; \
+    fi; \
+    /opt/graphify/bin/pip install --no-cache-dir --disable-pip-version-check "$SPEC"; \
+    rm -rf /opt/graphify/lib/python3.*/site-packages/pip \
+           /opt/graphify/lib/python3.*/site-packages/pip-*.dist-info \
+           /opt/graphify/bin/pip*; \
+    ln -s /opt/graphify/bin/graphify /usr/local/bin/graphify; \
+    test -x /opt/graphify/bin/graphify
+
+# ── Bake the graphify usage guide (synced to the volume by the entrypoint) ──
+COPY skills-graphify /opt/skills-graphify
+
 # ── Layout & entrypoint ────────────────────────────────────────────────────
-RUN mkdir -p /data/projects
+RUN test -f /opt/skills-graphify/graphify-usage/SKILL.md \
+    && mkdir -p /data/projects
 WORKDIR /data
 
 COPY entrypoint.sh /usr/local/bin/sha2lato-entrypoint

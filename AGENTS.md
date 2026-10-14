@@ -32,17 +32,21 @@ weekly CVE-fresh rebuilds. Public repo (MIT), fork-friendly.
 - **Config UX:** convention over configuration — the only required value is
   the bot token; every knob has one override point (`secrets/.env.agent` via
   `deploy/configure.sh`); users never edit compose/Dockerfile.
+- **Long Docker builds / validations:** run them in separate subagents
+  (parallel when independent) so verbose build logs stay out of the main
+  context; have them report compact pass/fail summaries and sizes.
 
 ## Current state
 
-Complete and review-gated (3 adversarial cycles, all findings resolved):
-agent image (kimaki + opencode 2 + ui-ux-pro-max + optional workflow packs),
+Complete and review-gated (3 adversarial cycles + parallel-agent validation,
+all findings resolved): agent image (kimaki + opencode 2 + ui-ux-pro-max +
+agents-opencode pack, plus ponytail and graphify) built down to ~1.6 GB,
 compose stack (agent + DinD), secrets + age overlay, GitHub + Forgejo CI
 (multi-arch, weekly rebuild, fork-safe), host bootstrap/update/configure
-scripts, 9 scoped docs. Workflow packs are selected via a single
-`AGENT_PACK` env (agents-opencode | superpowers, mutually exclusive). Zero
-commits so far. The maintainer's detailed working state lives in `HANDOFF.md`
-— gitignored, local checkout only (not present in clones/forks).
+scripts, 9 scoped docs. `AGENT_PACK` defaults to `agents-opencode` (also
+`superpowers` | `none`); `PONYTAIL=1` and `GRAPHIFY=1` extras are on by
+default and toggleable. One commit so far (`7739ffb Initial release`) — the
+extras/docs batch after it is uncommitted.
 
 ## Initial commit recipe (Windows authoring → Linux exec bits)
 
@@ -72,3 +76,10 @@ Commits may be SSH-signed (git ≥ 2.34: `gpg.format ssh` + `user.signingkey` +
   `AGENT_PACK` selector (owner's agents-opencode pack baked in / superpowers
   plugin), mutually exclusive with enforced worktree rules. Awaiting owner's
   first commit.
+- **2026-10-14 (session 1, continued):** Added workflow extras with defaults
+  on — ponytail (plugin spec) and graphify (baked CLI + usage guide) — made
+  `AGENT_PACK` default to agents-opencode (adds `none`), extended
+  `configure.sh`, and fixed a hidden 684 MB npm-cache bloat (image 2474 →
+  1645 MB, smaller than the pre-graphify baseline). arm64 wheels and the full
+  toggle matrix verified via parallel subagents. First commit made
+  (`7739ffb Initial release`); the extras batch is uncommitted.
