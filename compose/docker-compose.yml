@@ -1,0 +1,90 @@
+# sha2lato — the agent box.
+#
+#   agent         kimaki + opencode 2 + ui-ux-pro-max skill (the custom image)
+#   dind          docker-in-docker sidecar: the agent builds & runs project
+#                 images through it (DOCKER_HOST), isolated from the host
+#   github-runner optional self-hosted GitHub Actions runner (profile, off)
+#
+# Personal config lives in secrets/*.env (see the *.example files) and
+# compose/.env. This file stays impersonal — fork-friendly by design.
+
+name: sha2lato
+
+services:
+  agent:
+    # Local build by default; point SHA2LATO_AGENT_IMAGE at your registry
+    # image in compose/.env once CI publishes it (see docs/ci-cd.md).
+    image: ${SHA2LATO_AGENT_IMAGE:-sha2lato-agent:local}
+    build:
+      context: ../agent
+    restart: unless-stopped
+    env_file:
+      # Runtime config: KIMAKI_BOT_TOKEN, MACHINE_NAME, optional provider
+      # keys. Create from secrets/.env.agent.example. Optional on purpose:
+      # the stack must come up for local builds even before you configure it.
+      - path: ../secrets/.env.agent
+        required: false
+    environment:
+      # DinD sidecar over TLS (certs shared via the dind-certs volume)
+      DOCKER_HOST: tcp://docker:2376
+      DOCKER_TLS_VERIFY: "1"
+      DOCKER_CERT_PATH: /certs/client
+    volumes:
+      - agent-data:/data
+      - dind-certs:/certs:ro
+      # SSH keys for git (Forgejo/GitHub deploy keys) — see docs/secrets.md
+      - ../secrets/ssh:/root/.ssh:ro
+    healthcheck:
+      test: ["CMD", "sh", "-c", "kimaki status --data-dir \"$${KIMAKI_DATA_DIR:-/data}\""]
+      interval: 60s
+      timeout: 15s
+      start_period: 60s
+      retries: 3
+
+  dind:
+    image: docker:29-dind
+    restart: unless-stopped
+    privileged: true
+    # TLS daemon on 2376 (entrypoint default host/tls); certs into /certs
+    command: ["--host=tcp://0.0.0.0:2376", "--tlsverify"]
+    environment:
+      DOCKER_TLS_CERTDIR: /certs
+      # Only so the in-container healthcheck CLI can reach the daemon
+      DOCKER_HOST: tcp://localhost:2376
+      DOCKER_TLS_VERIFY: "1"
+      DOCKER_CERT_PATH: /certs/client
+    volumes:
+      - dind-certs:/certs
+      - dind-data:/var/lib/docker
+    healthcheck:
+      test: ["CMD", "docker", "info"]
+      interval: 30s
+      timeout: 10s
+      start_period: 20s
+      retries: 3
+
+  # Optional: self-hosted GitHub Actions runner. Off by default.
+  # Enable: docker compose --profile github-runner up -d  (docs/github-runner.md)
+  github-runner:
+    image: myoung34/github-runner:latest
+    profiles: ["github-runner"]
+    restart: unless-stopped
+    env_file:
+      - path: ../secrets/.env.github-runner
+        required: false
+    environment:
+      RUNNER_NAME: sha2lato-github-runner
+      RUNNER_GROUP: default
+      LABELS: sha2lato,linux
+    volumes:
+      - github-runner-data:/home/runner/actions-runner
+      # Docker socket: jobs that build images (this repo's CI does) need it.
+      # Same trust model as a Forgejo build runner — personal, single-tenant.
+      # If jobs still can't reach docker, add `user: root` to this service.
+      - /var/run/docker.sock:/var/run/docker.sock
+
+volumes:
+  agent-data:
+  dind-certs:
+  dind-data:
+  github-runner-data:

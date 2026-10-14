@@ -1,0 +1,43 @@
+# ── Secrets & runtime state ──────────────────────────────────────────
+# Real env files — only *.example counterparts are committed
+secrets/.env.*
+!secrets/.env.*.example
+
+# SSH key material — generated per host, see docs/secrets.md
+secrets/ssh/
+
+# age overlay — encrypted *.age files and the recipient (public key) are
+# safe to commit; private keys never are
+secrets/age/*
+!secrets/age/*.age
+!secrets/age/recipient
+!secrets/age/.gitkeep
+
+# Root-level env (compose interpolation)
+.env
+
+# ── Local working state ───────────────────────────────────────────────
+# Execution handoff for follow-up sessions — local only, never ships
+HANDOFF.md
+
+# ── Local data & state ───────────────────────────────────────────────
+data/
+*.db
+*.db-shm
+*.db-wal
+*.log
+
+# ── OS / editor noise ────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# ── Tooling caches ───────────────────────────────────────────────────
+node_modules/
+.cache/
+tmp/

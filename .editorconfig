@@ -1,0 +1,20 @@
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[*.md]
+# Markdown trailing spaces can be meaningful (hard line breaks)
+trim_trailing_whitespace = false
+
+[*.{yml,yaml,json}]
+indent_size = 2
+
+[*.{sh,bash}]
+indent_size = 2
+
+[Dockerfile]
+indent_size = 2

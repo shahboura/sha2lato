@@ -1,0 +1,26 @@
+# sha2lato — authored on Windows, runs on Linux.
+# Normalize everything to LF in the repo AND on checkout so no CRLF
+# ever reaches a Linux container, entrypoint, or CI runner.
+
+* text=auto eol=lf
+
+# Explicit LF for anything parsed or executed on Linux
+*.sh        text eol=lf
+Dockerfile  text eol=lf
+*.yml       text eol=lf
+*.yaml      text eol=lf
+*.env       text eol=lf
+*.example   text eol=lf
+*.gitkeep   text eol=lf
+
+# Binaries — never normalize
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.ico   binary
+*.webp  binary
+*.zip   binary
+*.gz    binary
+*.tar   binary
+*.age   binary

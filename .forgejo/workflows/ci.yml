@@ -1,0 +1,209 @@
+# Forgejo Actions CI — runs on your act_runner, mirroring the GitHub pipeline:
+# lint (shellcheck/hadolint/actionlint) → build multi-arch
+# (linux/amd64 + linux/arm64 via QEMU) → publish to the Forgejo container
+# registry → deploy over SSH. Weekly rebuild mirrors rebuild.yml.
+#
+# ── Reference runner setup (this repo) ──────────────────────────────────────
+# - runs-on: `linux` — change to a label your runner serves (see Forgejo
+#   → Site Administration → Runners, or repo Settings → Actions → Runners)
+# - Runner config.yaml: `container.valid_volumes: [/var/run/docker.sock]`
+#   whitelists the socket so each job can request it via container.volumes
+#   below (no runner-side docker_host change needed)
+# - Jobs run in the Docker OFFICIAL node:24-bookworm image (digest-pinned,
+#   supply-chain clean); the Docker CLI + buildx are installed from Docker's
+#   official apt repo in a setup step (~30s). Alternative job image
+#   (community act image) documented in docs/ci-cd.md.
+# - Linters read files via stdin: job containers cannot share filesystem
+#   paths with containers created through the host socket (a `-v $PWD`
+#   mount would resolve against the HOST). Validated by tmp/lint-sim.sh.
+#
+# Before first use: change the two forgejo.example.com placeholders to your
+# Forgejo host and set REGISTRY_USERNAME + REGISTRY_TOKEN repo secrets.
+name: CI
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  schedule:
+    - cron: "17 3 * * 1"
+  workflow_dispatch:
+    inputs:
+      platforms:
+        description: buildx platforms
+        type: string
+        default: linux/amd64,linux/arm64
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  lint:
+    name: lint (shellcheck, hadolint, actionlint)
+    runs-on: linux
+    container:
+      image: node:24-bookworm@sha256:3d27e5c11e5786e309ec3e03f93ae536eb36e6e5eb3714d5eb3300a36157add0
+      volumes:
+        - /var/run/docker.sock:/var/run/docker.sock
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Docker CLI + Buildx (official Docker apt repo)
+        run: |
+          install -m 0755 -d /etc/apt/keyrings
+          curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc
+          chmod a+r /etc/apt/keyrings/docker.asc
+          . /etc/os-release
+          echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/debian ${VERSION_CODENAME} stable" > /etc/apt/sources.list.d/docker.list
+          apt-get update -qq
+          apt-get install -y -qq --no-install-recommends docker-ce-cli docker-buildx-plugin
+
+      - name: Preflight — Docker access
+        run: |
+          docker info >/dev/null 2>&1 || {
+            echo "No Docker daemon in this job."
+            echo "See docs/ci-cd.md → 'Forgejo runner requirements'."
+            exit 1
+          }
+
+      - name: script exec bits (Windows-authored repo guard)
+        run: |
+          for f in agent/entrypoint.sh deploy/update.sh deploy/bootstrap-host.sh deploy/age.sh deploy/configure.sh; do
+            if [ ! -x "$f" ]; then echo "ERROR: $f lost its executable bit (git mode 100755 required)"; exit 1; fi
+          done
+
+      # Linter images pinned tag@digest (immutable) — same pins as GitHub CI.
+      - name: shellcheck
+        run: |
+          fail=0
+          for f in agent/entrypoint.sh deploy/*.sh; do
+            echo "--- $f"
+            cat "$f" | docker run --rm -i \
+              koalaman/shellcheck:v0.11.0@sha256:61862eba1fcf09a484ebcc6feea46f1782532571a34ed51fedf90dd25f925a8d - || fail=1
+          done
+          exit $fail
+
+      - name: hadolint
+        run: |
+          docker run --rm -i \
+            hadolint/hadolint:v2.15.1@sha256:32dac94127fd60b7b7e3fbfc65e1383b9b5e25c9bfd7b8536de7a539fe68a12d \
+            < agent/Dockerfile
+
+      - name: actionlint (GitHub + Forgejo workflows)
+        run: |
+          fail=0
+          for f in .github/workflows/*.yml .forgejo/workflows/*.yml; do
+            echo "--- $f"
+            cat "$f" | docker run --rm -i \
+              rhysd/actionlint:1.7.12@sha256:b1934ee5f1c509618f2508e6eb47ee0d3520686341fec936f3b79331f9315667 \
+              -stdin-filename "$f" - || fail=1
+          done
+          exit $fail
+
+  build:
+    needs: [lint]
+    runs-on: linux
+    container:
+      image: node:24-bookworm@sha256:3d27e5c11e5786e309ec3e03f93ae536eb36e6e5eb3714d5eb3300a36157add0
+      volumes:
+        - /var/run/docker.sock:/var/run/docker.sock
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Docker CLI + Buildx (official Docker apt repo)
+        run: |
+          install -m 0755 -d /etc/apt/keyrings
+          curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc
+          chmod a+r /etc/apt/keyrings/docker.asc
+          . /etc/os-release
+          echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/debian ${VERSION_CODENAME} stable" > /etc/apt/sources.list.d/docker.list
+          apt-get update -qq
+          apt-get install -y -qq --no-install-recommends docker-ce-cli docker-buildx-plugin
+
+      - name: Preflight — Docker access
+        run: |
+          docker info >/dev/null 2>&1 || {
+            echo "No Docker daemon in this job."
+            echo "See docs/ci-cd.md → 'Forgejo runner requirements'."
+            exit 1
+          }
+
+      - name: Set up QEMU (arm64 emulation)
+        if: contains(inputs.platforms || 'linux/amd64,linux/arm64', 'arm64')
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to the Forgejo registry
+        uses: docker/login-action@v3
+        with:
+          registry: forgejo.example.com # ← change to your Forgejo host
+          username: ${{ secrets.REGISTRY_USERNAME }}
+          password: ${{ secrets.REGISTRY_TOKEN }}
+
+      - name: Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: forgejo.example.com/${{ github.repository_owner }}/sha2lato-agent # ← change host
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=sha,prefix=sha-,format=short
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: agent
+          platforms: ${{ inputs.platforms || 'linux/amd64,linux/arm64' }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+  deploy:
+    name: deploy to host
+    needs: [build]
+    if: github.ref == 'refs/heads/main'
+    runs-on: linux
+    container:
+      # Deploy needs only ssh + bash (both in the official node image).
+      image: node:24-bookworm@sha256:3d27e5c11e5786e309ec3e03f93ae536eb36e6e5eb3714d5eb3300a36157add0
+    concurrency:
+      group: deploy
+      cancel-in-progress: false
+    steps:
+      - name: Check deploy configuration
+        id: check
+        env:
+          HOST: ${{ secrets.DEPLOY_SSH_HOST }}
+        run: |
+          if [ -n "$HOST" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "DEPLOY_SSH_* secrets not configured — skipping deploy."
+          fi
+
+      - name: Update the stack over SSH
+        if: steps.check.outputs.enabled == 'true'
+        env:
+          SSH_HOST: ${{ secrets.DEPLOY_SSH_HOST }}
+          SSH_USER: ${{ secrets.DEPLOY_SSH_USER }}
+          SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          SSH_PORT: ${{ secrets.DEPLOY_SSH_PORT || '22' }}
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -p "$SSH_PORT" -H "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+          # Assumes the repo checkout lives at /opt/sha2lato — see deploy/bootstrap-host.sh
+          ssh -i ~/.ssh/deploy_key -p "$SSH_PORT" \
+            -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o BatchMode=yes \
+            "$SSH_USER@$SSH_HOST" "cd /opt/sha2lato && ./deploy/update.sh"

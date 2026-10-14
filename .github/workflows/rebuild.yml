@@ -1,0 +1,29 @@
+# Weekly CVE-freshness rebuild: republish :latest from the current source.
+#
+# Pulls the newest base image (node:24-slim), kimaki@latest, opencode v2, and
+# Debian security patches at build time, then deploys to the host so running
+# boxes pick up the fixes. Monday 03:17 UTC + manual dispatch.
+name: Rebuild (weekly)
+
+on:
+  schedule:
+    - cron: "17 3 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    uses: ./.github/workflows/build.yml
+    permissions:
+      contents: read
+      packages: write
+    secrets: inherit
+
+  deploy:
+    name: deploy to host
+    needs: [build]
+    if: github.ref == 'refs/heads/main'
+    uses: ./.github/workflows/deploy.yml
+    secrets: inherit

@@ -1,0 +1,126 @@
+# Usage — day 2 from your phone
+
+The mental model is simple: **channels are projects, threads are sessions.**
+
+- Send a message in a project channel → Kimaki starts a **thread** = one OpenCode session working in that project's directory.
+- Return to any thread anytime (search, `/resume`) — or start a new one by sending a new message in the channel.
+- Everything the agent does (reads, edits, test runs, docker builds) happens on **your** host, inside the agent container and its DinD sidecar.
+
+## First steps in Discord
+
+| Command | What it does |
+|---|---|
+| `/login` | Connect a model provider (Claude Pro/Max, ChatGPT, Gemini, API keys) — do this once |
+| `/model` | Switch the model for a channel or session (or `/<name>-agent` shortcuts) |
+| `/agent` | Switch the agent/system prompt |
+| `/verbosity` | Tune how much the bot posts in a channel |
+| `/session-id` | Show the session ID + command to open it in the OpenCode TUI (if you run one on the host) |
+
+Long prompts are easier as **attachments**: tap `+` → “Send message as file”.
+
+## Creating new projects (from Discord, no SSH needed)
+
+The agent has the `kimaki` CLI on its PATH inside every session. To add a project, just ask:
+
+> “Clone `git@your-forgejo-host:you/new-app.git` into `/data/projects/new-app` and add it as a project.”
+
+The agent runs the clone + `kimaki project add /data/projects/new-app` — and a **new channel appears** in your server. Brand-new (not yet existing) projects work too:
+
+> “Create a new project `scratch` in `/data/projects/scratch`, `git init` it, add a starter README, and add it as a project.”
+
+Requirements: SSH access to the git host (see [secrets.md](secrets.md)); git present (it is, in the image).
+
+## Everyday workflows
+
+- **Queue work while the agent is busy** — end a message with `. queue` (or `/queue`); edit the Discord message later to update the queued text. Great from mobile: “run the full test suite and report back. queue”
+- **Ask a side question without derailing** — end with `. btw` (or `/btw`): forks the context into a new thread while the main run continues.
+- **Worktrees — isolated experiments** — `/new-worktree <name>` starts a session in a fresh git worktree (never touching your main checkout); `/merge-worktree` merges it back (rebase or squash). Make it automatic per channel with `kimaki channel worktrees on` (or `KIMAKI_WORKTREES=1` for all sessions).
+- **Review diffs on your phone** — `/diff` posts a shareable web diff URL of the session's changes.
+- **Tunnels — see your dev server from your phone** — ask the agent to run `kimaki tunnel -- <dev command>` (or `-p <port>`); it prints a public URL you can open anywhere.
+- **Voice** — record a voice note (transcribed with your file tree for accuracy); or join the **Kimaki voice** channel and talk. `kimaki --voice <name>` once to change the voice.
+- **Images & files** — attach screenshots/files to messages; the agent can also upload files back into the thread.
+- **Shell commands** — prefix a message with `!` to run it raw in the project folder (e.g. `! git status`).
+- **Routines — scheduled prompts** — ask for a cron-style routine (e.g. “every weekday at 8:00, summarize open PRs in this channel”) — great for morning digests from your phone.
+- **Sessions sleep & wake** — long-idle sessions are cheap; resume whenever.
+
+## Access control
+
+Only the server owner, members with **Manage Server**/**Administrator**, or members with a role named **`Kimaki`** can drive the bot. A role named **`no-kimaki`** blocks anyone (even admins). See [discord-bot.md](discord-bot.md).
+
+## Docker-based projects
+
+The agent has full `docker` (and `buildx`, `compose`) against the **DinD sidecar** — isolated from the host daemon. So it can `docker build`, `docker run`, spin up compose stacks, run test containers, and even multi-arch builds. Images live in the sidecar's own volume; if disk grows:
+
+```bash
+docker compose -f compose/docker-compose.yml exec dind docker image prune -af
+```
+
+## Optional: agent workflow packs (choose one)
+
+Two optional packs change how the agent works. Enable at most one via a single selector in `secrets/.env.agent` — mutual exclusion is built in (one variable, two values):
+
+| Pack | What it adds | Best when |
+|---|---|---|
+| `AGENT_PACK=agents-opencode` | 10 agent personas (orchestrator, codebase, review, planner, docs, researcher, …), 16 commands, 24 skills — all languages | You want a structured *delivery loop* with named specialists |
+| `AGENT_PACK=superpowers` | The [Superpowers](https://github.com/obra/superpowers) methodology: brainstorm → spec → plan → subagent-driven execution → TDD → review, auto-triggered | You want plan-first discipline for autonomous work |
+
+```ini
+# in secrets/.env.agent
+AGENT_PACK=agents-opencode     # or: superpowers   (empty = neither)
+```
+
+Then `docker compose -f compose/docker-compose.yml up -d`. Switching packs later is the same one-line change + `up -d` — no rebuild (both packs ship in the image/config).
+
+**Discord synergy:** Kimaki exposes both natively — agents appear as `/<name>-agent` switches and commands as slash commands. Try `/plan-project`, `/execution-loop`, `/checkpoint` (agents-opencode) or ask *“tell me about your superpowers”* (Superpowers).
+
+**Worktrees — one owner only:**
+
+| Active pack | Worktree guidance |
+|---|---|
+| `agents-opencode` (or none) | Kimaki worktrees fully compatible — `KIMAKI_WORKTREES=1` or per-channel `kimaki channel worktrees on` |
+| `superpowers` | **Leave `KIMAKI_WORKTREES` unset** (and channel worktrees off) — Superpowers manages git worktrees itself as part of its branch lifecycle; the entrypoint warns if both are set |
+
+**Does this affect Kimaki?** No — Kimaki identifies sessions by its thread↔session mapping, not by filesystem layout, so sessions stay distinct no matter how git worktrees are managed. The only rule is worktree ownership (table above). With superpowers active, review changes through its branch/merge flow (`git log`, PR) rather than `/diff` on the main checkout — its work happens on its own branch.
+
+**Details:**
+
+- `agents-opencode` is baked into the image (pinned `2.6.0`); the entrypoint installs it into the global OpenCode config on first start, all languages. Verify in Discord: ask *“@orchestrator plan this”* or look for the slash commands.
+- **Cross-directory access:** the pack ships `permission.external_directory: "deny"`; the box's entrypoint restores OpenCode's default (`"ask"`) on install, because documented flows (cloning new projects, `kimaki project add`) write outside the session's project directory. In Discord, permission asks appear as **approve buttons in the thread**. `doom_loop` stays `deny` (blocks a tool repeated identically 3× — a feature, not a bug).
+- **Pack updates:** the install marker tracks the version — bump `AGENTS_OPENCODE_VERSION`, rebuild the image, and the next start updates the installed pack on the volume automatically.
+- `superpowers` pins a git tag (`SUPERPOWERS_TAG`, default `v7.0.0`); its version-only telemetry ping is off unless you set `SUPERPOWERS_DISABLE_TELEMETRY=0`.
+- Switching packs removes the other pack's *plugin* entry automatically; to also remove `agents-opencode` files, run `agents-opencode --global --uninstall` inside the container and clear `AGENT_PACK` (otherwise it reinstalls on the next start).
+
+## Multiple agent machines, one Discord server
+
+Scale out by running the same stack on another host — each machine keeps its own projects, sessions, and model logins, and your phone sees them side by side in one server.
+
+```mermaid
+flowchart TB
+    ds["One Discord server (yours)"]
+    ds --> c1["category: Kimaki alpha"]
+    ds --> c2["category: Kimaki workshop"]
+    subgraph h1["Host 1 · bot 1 (MACHINE_NAME=alpha)"]
+        c1 --> s1["channels owned by host 1<br/>projects, sessions, /data"]
+    end
+    subgraph h2["Host 2 · bot 2 (MACHINE_NAME=workshop)"]
+        c2 --> s2["channels owned by host 2<br/>projects, sessions, /data"]
+    end
+```
+
+**How routing works:** a channel belongs to the machine whose database registered it, and **other Kimaki bots ignore channels they don't own** — so multiple self-hosted bots coexist safely in the same server. Each bot only answers where its own channels live; the category (`Kimaki <machine>`) is its visible territory.
+
+**Setup, per additional machine:**
+
+1. Create a **new Discord application** for it (its own token) — same flow as [discord-bot.md](discord-bot.md).
+2. On the new host: `bootstrap-host.sh` → `secrets/.env.agent` with the **new token** and a distinct `MACHINE_NAME` (e.g. `workshop`) → `docker compose -f compose/docker-compose.yml up -d`.
+3. `docker compose … exec agent kimaki bot install-url` → invite **that bot** to the same server → `restart agent`.
+4. Route work by machine: heavy builds on the beefier host, GPU work on the GPU box — projects are added per machine, so the channel list *is* your routing table.
+
+> ⚠️ **One token = one machine.** Never run the same bot token on two hosts — both would log in as the same bot user and double-process every message.
+> 💡 **Access control is server-wide** (the `Kimaki` / `no-kimaki` roles), so one role assignment covers all your machines.
+
+## Updating the box
+
+- Registry mode: `./deploy/update.sh` (or let CI do it on every push / weekly rebuild).
+- Local-build mode: `docker compose -f compose/docker-compose.yml up -d --build`.
+- Your sessions, logins, and projects live on the `agent-data` volume — updates never log you out. Projects stay in `/data/projects`.

@@ -1,0 +1,60 @@
+# Diagnostic: verify this Forgejo runner can build Docker images.
+#
+# Run from the Actions tab (workflow_dispatch only — never runs automatically).
+# Uses the exact pattern of .forgejo/workflows/ci.yml, so a green run here
+# means the CI pipeline's Docker requirements are satisfied.
+# See docs/ci-cd.md → "Forgejo runner requirements" if anything fails.
+#
+# If the job stays QUEUED forever, this runner doesn't serve the `linux`
+# label — check Forgejo → Site Administration → Runners for its labels and
+# change `runs-on` below to match.
+name: runner-check
+
+on:
+  workflow_dispatch:
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  docker-check:
+    runs-on: linux
+    container:
+      image: node:24-bookworm@sha256:3d27e5c11e5786e309ec3e03f93ae536eb36e6e5eb3714d5eb3300a36157add0
+      volumes:
+        - /var/run/docker.sock:/var/run/docker.sock
+    steps:
+      - name: Host info
+        run: |
+          uname -a
+          echo "arch: $(uname -m)"
+          echo "whoami: $(whoami)"
+
+      - name: Set up Docker CLI + Buildx (official Docker apt repo)
+        run: |
+          install -m 0755 -d /etc/apt/keyrings
+          curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc
+          chmod a+r /etc/apt/keyrings/docker.asc
+          . /etc/os-release
+          echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/debian ${VERSION_CODENAME} stable" > /etc/apt/sources.list.d/docker.list
+          apt-get update -qq
+          apt-get install -y -qq --no-install-recommends docker-ce-cli docker-buildx-plugin
+
+      - name: Docker CLI + daemon
+        run: |
+          command -v docker || { echo "FAIL: docker CLI missing after setup"; exit 1; }
+          docker version
+          docker info | head -n 25
+
+      - name: Buildx
+        run: |
+          docker buildx version || { echo "FAIL: buildx not available"; exit 1; }
+
+      - name: Run a real container
+        run: docker run --rm hello-world
+
+      - name: Summary
+        run: |
+          echo "SUCCESS: this runner can build images."
+          echo "If QEMU/arm64 builds are also needed, verify docker/setup-qemu-action can register binfmt (needs privileged CPU emulation helpers — the socket mount allows this)."

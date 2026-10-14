@@ -1,0 +1,69 @@
+# CI: lint → build & publish (multi-arch → GHCR) → deploy over SSH.
+#
+# Deploy is skipped automatically when DEPLOY_SSH_* secrets are not set,
+# so forks run build-only with zero configuration (see docs/ci-cd.md).
+name: CI
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: lint (shellcheck, hadolint, actionlint)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: script exec bits (Windows-authored repo guard)
+        run: |
+          for f in agent/entrypoint.sh deploy/update.sh deploy/bootstrap-host.sh deploy/age.sh deploy/configure.sh; do
+            if [ ! -x "$f" ]; then
+              echo "::error::$f lost its executable bit (git mode 100755 required)"
+              exit 1
+            fi
+          done
+
+      # Linter images are pinned tag@digest (immutable) for supply-chain safety.
+      # Update procedure: docs/ci-cd.md → "Linter pinning".
+      - name: shellcheck
+        run: |
+          docker run --rm -v "$PWD:/repo" --workdir /repo \
+            koalaman/shellcheck:v0.11.0@sha256:61862eba1fcf09a484ebcc6feea46f1782532571a34ed51fedf90dd25f925a8d \
+            agent/entrypoint.sh deploy/*.sh
+
+      - name: hadolint
+        run: |
+          docker run --rm -i \
+            hadolint/hadolint:v2.15.1@sha256:32dac94127fd60b7b7e3fbfc65e1383b9b5e25c9bfd7b8536de7a539fe68a12d \
+            < agent/Dockerfile
+
+      - name: actionlint (GitHub + Forgejo workflows)
+        run: |
+          docker run --rm -v "$PWD:/repo" --workdir /repo \
+            rhysd/actionlint:1.7.12@sha256:b1934ee5f1c509618f2508e6eb47ee0d3520686341fec936f3b79331f9315667 \
+            -color .github/workflows/*.yml
+          docker run --rm -v "$PWD:/repo" --workdir /repo \
+            rhysd/actionlint:1.7.12@sha256:b1934ee5f1c509618f2508e6eb47ee0d3520686341fec936f3b79331f9315667 \
+            -color .forgejo/workflows/*.yml
+
+  build:
+    needs: [lint]
+    uses: ./.github/workflows/build.yml
+    permissions:
+      contents: read
+      packages: write
+    secrets: inherit
+
+  deploy:
+    name: deploy to host
+    needs: [build]
+    if: github.ref == 'refs/heads/main'
+    uses: ./.github/workflows/deploy.yml
+    secrets: inherit

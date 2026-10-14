@@ -1,0 +1,51 @@
+# Reusable deploy workflow: SSH into the host and run deploy/update.sh.
+#
+# Self-skipping: when DEPLOY_SSH_* secrets are not configured (e.g. on forks),
+# the job logs a notice and succeeds without deploying. Configure secrets to
+# enable CD — see docs/ci-cd.md.
+name: deploy
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    # Never run two deploys at once (ci.yml and rebuild.yml share this group)
+    concurrency:
+      group: deploy
+      cancel-in-progress: false
+    steps:
+      - name: Check deploy configuration
+        id: check
+        env:
+          HOST: ${{ secrets.DEPLOY_SSH_HOST }}
+        run: |
+          if [ -n "$HOST" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::DEPLOY_SSH_* secrets not configured — skipping deploy (expected on forks)."
+          fi
+
+      - name: Update the stack over SSH
+        if: steps.check.outputs.enabled == 'true'
+        env:
+          SSH_HOST: ${{ secrets.DEPLOY_SSH_HOST }}
+          SSH_USER: ${{ secrets.DEPLOY_SSH_USER }}
+          SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          SSH_PORT: ${{ secrets.DEPLOY_SSH_PORT || '22' }}
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -p "$SSH_PORT" -H "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+          # Assumes the repo checkout lives at /opt/sha2lato — see deploy/bootstrap-host.sh
+          ssh -i ~/.ssh/deploy_key -p "$SSH_PORT" \
+            -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o BatchMode=yes \
+            "$SSH_USER@$SSH_HOST" "cd /opt/sha2lato && ./deploy/update.sh"
