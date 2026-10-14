@@ -27,7 +27,7 @@ docker compose -f compose/docker-compose.yml exec agent kimaki status
 
 | Symptom | Likely cause → fix |
 |---|---|
-| `Cannot connect to the Docker daemon` inside sessions | DinD sidecar down or certs stale: `docker compose -f compose/docker-compose.yml up -d dind` → re-run. If it persists, wipe the cert volume and recreate both: `down`, `docker volume rm sha2lato_dind-certs`, `up -d` (builds/images are in `dind-data`, unaffected) |
+| `Cannot connect to the Docker daemon` inside sessions | DinD sidecar down or certs stale: `docker compose -f compose/docker-compose.yml up -d dind` → re-run. If it persists, wipe the cert volume and recreate both: `down`, `docker volume rm sha2lato-dind-certs`, `up -d` (builds/images are in `sha2lato-dind-data`, unaffected) |
 | Builds suddenly fail with TLS/cert errors | Same as above — the shared certs volume got corrupted; recreate it |
 | Sidecar eats disk | Prune inside it: `docker compose -f compose/docker-compose.yml exec dind docker image prune -af` (DinD has its own image store) |
 | QEMU/multi-arch builds hang | arm64 via QEMU is slow — expected. Prefer fewer platforms or a native arm64 host |

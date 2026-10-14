@@ -48,7 +48,7 @@ flowchart LR
 1. **Get a Linux box with Docker** — any VPS, home server, or a fresh Azure VM ([docs/hosting.md](docs/hosting.md)).
 2. **Bootstrap it**: `sudo ./deploy/bootstrap-host.sh <your-fork-url>` ([docs/hosting.md](docs/hosting.md)).
 3. **Create your Discord bot** (own identity, 5 minutes — [docs/discord-bot.md](docs/discord-bot.md)), then run `./deploy/configure.sh` on the host: it asks for the token and (optionally) a workflow pack.
-4. **Start it**: `docker compose -f compose/docker-compose.yml up -d --build`
+4. **Start it** (build-on-host mode): `docker compose -f compose/docker-compose.yml up -d --build` — or pull the CI-published image ([deployment modes](docs/configuration.md#deployment-modes))
 5. **Invite the bot**: `docker compose -f compose/docker-compose.yml exec agent kimaki bot install-url` → open the URL → authorize → `docker compose restart agent`
 6. In Discord: run `/login` to connect a model, then just talk to your agent. Tell it to `git clone` a repo into `/data/projects/…` and add it as a project — a new channel appears.
 
@@ -65,6 +65,7 @@ Full walkthroughs: [docs/](docs/README.md).
 | CI/CD — both pipelines, registries, deploys | [docs/ci-cd.md](docs/ci-cd.md) |
 | Using it from your phone (day 2) | [docs/usage.md](docs/usage.md) |
 | Optional self-hosted GitHub runner | [docs/github-runner.md](docs/github-runner.md) |
+| Running it under a UI (Arcane) | [docs/arcane.md](docs/arcane.md) |
 | Troubleshooting | [docs/troubleshooting.md](docs/troubleshooting.md) |
 
 ## Fork it

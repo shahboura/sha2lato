@@ -5,7 +5,7 @@
 # Non-interactive:  ./deploy/configure.sh --token <t> [--machine <m>]
 #                   [--pack agents-opencode|superpowers|none]
 #                   [--worktrees on|off] [--ponytail on|off] [--graphify on|off]
-#                   [--image <ref>]
+#                   [--image local|<registry-ref>]
 # Show current:     ./deploy/configure.sh --show
 #
 # Writes secrets/.env.agent (chmod 600) and compose/.env.
@@ -90,7 +90,7 @@ if [ "$MODE" = "show" ]; then
   printf '  PONYTAIL:          %s\n' "$([ "$CUR_PONYTAIL" = "0" ] && echo off || echo on)"
   printf '  GRAPHIFY:          %s\n' "$([ "$CUR_GRAPHIFY" = "0" ] && echo off || echo on)"
   printf 'compose/.env:\n'
-  printf '  SHA2LATO_AGENT_IMAGE: %s\n' "$CUR_IMAGE"
+  printf '  SHA2LATO_AGENT_IMAGE: %s (%s)\n' "$CUR_IMAGE" "$([ "$CUR_IMAGE" = "sha2lato-agent:local" ] && echo build-on-host || echo pull-from-registry)"
   exit 0
 fi
 
@@ -152,6 +152,20 @@ if [ "$MODE" = "interactive" ]; then
     GF_ANS=$(ask "Graphify repo knowledge graphs? y/N" "$gf_default")
     case "$GF_ANS" in n|N|no|NO) GRAPHIFY="0" ;; *) GRAPHIFY="1" ;; esac
   fi
+
+  if [ -z "$IMAGE" ]; then
+    printf 'Agent image:\n  1) build on host (default)\n  2) pull from registry (CI-published image)\n' >&2
+    img_default=1
+    case "$CUR_IMAGE" in
+      ""|sha2lato-agent:local) img_default=1 ;;
+      *) img_default=2 ;;
+    esac
+    IMG_ANS=$(ask "Choose 1-2" "$img_default")
+    case "$IMG_ANS" in
+      2) IMAGE=$(ask "Registry image ref" "${CUR_IMAGE:-ghcr.io/YOUR_USERNAME/sha2lato-agent:latest}") ;;
+      *) IMAGE="sha2lato-agent:local" ;;
+    esac
+  fi
 fi
 
 # Fill missing non-interactive values from the current config / defaults
@@ -160,6 +174,9 @@ fi
 if [ -z "$PACK" ]; then PACK="$CUR_PACK"; fi
 if [ -z "$PACK" ]; then PACK="agents-opencode"; fi
 [ -n "$IMAGE" ] || IMAGE="$CUR_IMAGE"
+case "$IMAGE" in
+  local|build) IMAGE="sha2lato-agent:local" ;;
+esac
 if [ -z "$WORKTREES" ]; then WORKTREES="$CUR_WT"; fi
 if [ -z "$PONYTAIL" ]; then PONYTAIL="$CUR_PONYTAIL"; fi
 if [ -z "$PONYTAIL" ]; then PONYTAIL="1"; fi
@@ -211,6 +228,8 @@ printf '\nsaved:\n'
 printf '  secrets/.env.agent  token: %s | machine: %s | pack: %s | worktrees: %s\n' \
   "$([ -n "$TOKEN" ] && echo set || echo empty)" "$MACHINE" "$PACK" "$WT_LABEL"
 printf '  extras              ponytail: %s | graphify: %s\n' "$PT_LABEL" "$GF_LABEL"
-printf '  compose/.env        image: %s\n' "$IMAGE"
+IMG_MODE=build-on-host
+case "$IMAGE" in *:local) ;; *) IMG_MODE=pull-from-registry ;; esac
+printf '  compose/.env        image: %s (%s)\n' "$IMAGE" "$IMG_MODE"
 printf '\napply:  docker compose -f compose/docker-compose.yml up -d\n'
 printf 'then, in Discord, run /login once to connect a model.\n'

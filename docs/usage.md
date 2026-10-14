@@ -128,6 +128,5 @@ flowchart TB
 
 ## Updating the box
 
-- Registry mode: `./deploy/update.sh` (or let CI do it on every push / weekly rebuild).
-- Local-build mode: `docker compose -f compose/docker-compose.yml up -d --build`.
+- `./deploy/update.sh` — detects the [deployment mode](configuration.md#deployment-modes) and rebuilds or pulls accordingly (or let CI do it on every push / weekly rebuild).
 - Your sessions, logins, and projects live on the `agent-data` volume — updates never log you out. Projects stay in `/data/projects`.

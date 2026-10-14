@@ -41,12 +41,14 @@ weekly CVE-fresh rebuilds. Public repo (MIT), fork-friendly.
 Complete and review-gated (3 adversarial cycles + parallel-agent validation,
 all findings resolved): agent image (kimaki + opencode 2 + ui-ux-pro-max +
 agents-opencode pack, plus ponytail and graphify) built down to ~1.6 GB,
-compose stack (agent + DinD), secrets + age overlay, GitHub + Forgejo CI
-(multi-arch, weekly rebuild, fork-safe), host bootstrap/update/configure
-scripts, 9 scoped docs. `AGENT_PACK` defaults to `agents-opencode` (also
-`superpowers` | `none`); `PONYTAIL=1` and `GRAPHIFY=1` extras are on by
-default and toggleable. One commit so far (`7739ffb Initial release`) — the
-extras/docs batch after it is uncommitted.
+compose stack (agent + DinD, explicit volume names), secrets + age overlay,
+GitHub + Forgejo CI (multi-arch, weekly rebuild, fork-safe), host
+bootstrap/update/configure scripts, 10 scoped docs. `AGENT_PACK` defaults to
+`agents-opencode` (also `superpowers` | `none`); `PONYTAIL=1` and
+`GRAPHIFY=1` extras are on by default and toggleable; `SHA2LATO_AGENT_IMAGE`
+selects build-on-host vs pull-from-registry (docs/configuration.md →
+Deployment modes). Pushed to GitHub (public): CI green, multi-arch image
+published to GHCR. Forgejo leg deferred.
 
 ## Initial commit recipe (Windows authoring → Linux exec bits)
 
@@ -83,3 +85,11 @@ Commits may be SSH-signed (git ≥ 2.34: `gpg.format ssh` + `user.signingkey` +
   1645 MB, smaller than the pre-graphify baseline). arm64 wheels and the full
   toggle matrix verified via parallel subagents. First commit made
   (`7739ffb Initial release`); the extras batch is uncommitted.
+- **2026-10-14 (session 1, continued 2):** Pushed to GitHub (public); CI
+  green end-to-end (exec-bit guards, linters, multi-arch build+push to GHCR,
+  deploy self-skip). Delivered the deployment-mode batch: `update.sh` mode
+  detection + `--dry-run`, `configure.sh` image-mode choice, canonical
+  Deployment-modes docs, explicit volume names (rename-safe under UI
+  managers), and `docs/arcane.md` (running under a Docker management UI —
+  two recipes + one-owner rule). Forgejo leg deferred; firewall/SSH flags
+  still parked.

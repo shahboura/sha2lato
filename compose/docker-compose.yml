@@ -84,7 +84,15 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
 
 volumes:
+  # Explicit names (not project-prefixed): UI managers like Arcane leave
+  # explicitly-named volumes alone when a project is renamed, so the agent's
+  # data can't be copied or orphaned — and the names in docs stay stable.
+  # See docs/arcane.md.
   agent-data:
+    name: sha2lato-agent-data
   dind-certs:
+    name: sha2lato-dind-certs
   dind-data:
+    name: sha2lato-dind-data
   github-runner-data:
+    name: sha2lato-github-runner-data

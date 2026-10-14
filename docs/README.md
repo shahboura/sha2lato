@@ -11,4 +11,5 @@ New here? Read **1 → 2**, run `./deploy/configure.sh`, and you're running in ~
 | 5 | [CI/CD](ci-cd.md) | GitHub + Forgejo pipelines, registries, deploy mechanism, freshness strategy, linter pinning, Forgejo runner requirements, supply chain |
 | 6 | [Usage](usage.md) | Day-2 from your phone: new projects from Discord, workflow packs, queue/btw/worktrees/diff/tunnels, multi-machine |
 | 7 | [GitHub runner (optional)](github-runner.md) | Enabling the self-hosted GitHub runner profile |
-| 8 | [Troubleshooting](troubleshooting.md) | Symptom → cause → fix tables for every subsystem |
+| 8 | [Deploy with Arcane](arcane.md) | Running the stack under a Docker management UI: two recipes, the one-owner rule, UI shell access |
+| 9 | [Troubleshooting](troubleshooting.md) | Symptom → cause → fix tables for every subsystem |

@@ -40,7 +40,7 @@ Everything else in the repo is impersonal — fork-safe by design ([secrets.md](
 | `SUPERPOWERS_DISABLE_TELEMETRY` | `1` (off) | set `0` to allow the version-only telemetry ping |
 | `KIMAKI_WORKTREES` | empty (off) | `1` = fresh git worktree per session — **leave empty when superpowers is active** |
 | `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GEMINI_API_KEY` | empty | optional model keys; `/login` in Discord is the recommended path |
-| `SHA2LATO_AGENT_IMAGE` | `sha2lato-agent:local` | image to run: local build tag, or your registry image ([ci-cd.md](ci-cd.md)) |
+| `SHA2LATO_AGENT_IMAGE` | `sha2lato-agent:local` | selects the [deployment mode](#deployment-modes): local tag = build on host, any registry ref = pull |
 
 Rarely-needed knobs:
 
@@ -49,6 +49,21 @@ Rarely-needed knobs:
 | `SHA2LATO_DIR` | host scripts | checkout location (default `/opt/sha2lato`) |
 | `SSH_PORT` | `bootstrap-host.sh` | extra sshd port to keep open when enabling ufw |
 | `DEPLOY_SSH_*`, `REGISTRY_*` | repo secrets | CI deploy + Forgejo registry ([ci-cd.md](ci-cd.md)) |
+
+## Deployment modes
+
+`SHA2LATO_AGENT_IMAGE` in `compose/.env` selects one of **two deployment modes**. Everything else — services, volumes, secrets — is identical.
+
+| | `build-on-host` (default) | `pull-from-registry` |
+|---|---|---|
+| Value | `sha2lato-agent:local` | a registry ref, e.g. `ghcr.io/YOUR_USERNAME/sha2lato-agent:latest` |
+| First start | `docker compose -f compose/docker-compose.yml up -d --build` | `docker compose -f compose/docker-compose.yml pull` then `up -d` |
+| Updates | `./deploy/update.sh` rebuilds on the host | `./deploy/update.sh` pulls + recreates |
+| Use when | first run, hacking on the image, no registry | the CI-published image: fast deploys, no build toolchain on the host, weekly CVE-fresh rebuilds |
+
+- `deploy/update.sh` **detects the mode** from `compose/.env` and does the right thing; `--dry-run` prints the plan without executing.
+- **Never run `up -d --build` in registry mode** — with both `image:` and `build:` set, it builds locally and tags over the registry ref instead of pulling.
+- Switching modes = change the one line (`./deploy/configure.sh` asks), then `./deploy/update.sh`.
 
 ## Build-time (custom image)
 
@@ -71,7 +86,7 @@ Defaults: `KIMAKI_VERSION=latest`, `UIPRO_VERSION=latest` (the weekly rebuild re
 | Change | Apply with |
 |---|---|
 | any `secrets/.env.agent` value | `docker compose -f compose/docker-compose.yml up -d` (container recreates; data volume untouched) |
-| `compose/.env` image | same command (after `docker compose pull` in registry mode) |
+| `compose/.env` image (mode switch) | `./deploy/update.sh` — it detects the mode and either rebuilds (build-on-host) or pulls (pull-from-registry) |
 | workflow pack switch | same command — no rebuild; the entrypoint converges the config on start |
 
 State — projects, sessions, model logins — always lives in the `agent-data` volume. Configuration changes never touch it.

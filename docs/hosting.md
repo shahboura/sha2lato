@@ -35,12 +35,16 @@ Then follow the next steps it prints: fill in `secrets/.env.agent` ([discord-bot
 
 ```bash
 cd /opt/sha2lato
+# build-on-host mode (the default). Using the CI-published image instead?
+# see configuration.md → Deployment modes.
 docker compose -f compose/docker-compose.yml up -d --build
 ```
 
 ### Updates
 
-- **CI mode (recommended):** set your `DEPLOY_SSH_*` repo secrets and every push to `main` (plus the weekly rebuild) deploys automatically via `deploy/update.sh`.
+`deploy/update.sh` detects the [deployment mode](configuration.md#deployment-modes) from `compose/.env`, then either rebuilds on the host or pulls the registry image and recreates the stack. (`--dry-run` prints the plan.)
+
+- **CI mode (recommended):** set your `DEPLOY_SSH_*` repo secrets and every push to `main` (plus the weekly rebuild) deploys automatically.
 - **Manual:** `cd /opt/sha2lato && ./deploy/update.sh`
 - The host's git `origin` is the pull source. Point it at whichever remote is canonical for you (Forgejo or GitHub):
   `git -C /opt/sha2lato remote set-url origin <url>`
