@@ -3,7 +3,7 @@
 #
 # Interactive:      ./deploy/configure.sh
 # Non-interactive:  ./deploy/configure.sh --token <t> [--machine <m>]
-#                   [--pack agents-opencode|superpowers|none]
+#                   [--pack agents-opencode[@x.y.z]|superpowers[@tag]|none]
 #                   [--worktrees on|off] [--ponytail on|off] [--graphify on|off]
 #                   [--image local|<registry-ref>]
 # Show current:     ./deploy/configure.sh --show
@@ -118,7 +118,7 @@ if [ "$MODE" = "interactive" ]; then
     printf 'Workflow pack:\n  1) agents-opencode (agent roster + slash commands) [default]\n  2) superpowers (plan-first methodology)\n  3) none\n' >&2
     pack_default=1
     case "$CUR_PACK" in
-      superpowers) pack_default=2 ;;
+      superpowers|superpowers@*) pack_default=2 ;;
       none) pack_default=3 ;;
     esac
     PACK_ANS=$(ask "Choose 1-3" "$pack_default")
@@ -127,17 +127,36 @@ if [ "$MODE" = "interactive" ]; then
       3) PACK="none" ;;
       *) PACK="agents-opencode" ;;
     esac
+    case "$PACK" in
+      agents-opencode)
+        pin_default="latest"
+        case "$CUR_PACK" in agents-opencode@*) pin_default="${CUR_PACK#agents-opencode@}" ;; esac
+        PIN_ANS=$(ask "Pin an agents-opencode version (exact x.y.z, or latest)" "$pin_default")
+        case "$PIN_ANS" in ""|latest) ;; *) PACK="agents-opencode@$PIN_ANS" ;; esac
+        ;;
+      superpowers)
+        pin_default="latest"
+        case "$CUR_PACK" in superpowers@*) pin_default="${CUR_PACK#superpowers@}" ;; esac
+        PIN_ANS=$(ask "Pin a superpowers git tag (e.g. v7.0.0, or latest)" "$pin_default")
+        case "$PIN_ANS" in ""|latest) ;; *) PACK="superpowers@$PIN_ANS" ;; esac
+        ;;
+    esac
   fi
 
-  if [ "$PACK" = "superpowers" ]; then
-    WORKTREES=""
-    printf '(Kimaki worktrees stay off — superpowers manages git worktrees itself)\n' >&2
-  elif [ -z "$WORKTREES" ]; then
-    wt_default=n
-    if [ -n "$CUR_WT" ]; then wt_default=y; fi
-    WT_ANS=$(ask "Kimaki worktrees (fresh git worktree per session)? y/N" "$wt_default")
-    case "$WT_ANS" in y|Y|yes|YES) WORKTREES="1" ;; *) WORKTREES="" ;; esac
-  fi
+  case "$PACK" in
+    superpowers|superpowers@*)
+      WORKTREES=""
+      printf '(Kimaki worktrees stay off — superpowers manages git worktrees itself)\n' >&2
+      ;;
+    *)
+      if [ -z "$WORKTREES" ]; then
+        wt_default=n
+        if [ -n "$CUR_WT" ]; then wt_default=y; fi
+        WT_ANS=$(ask "Kimaki worktrees (fresh git worktree per session)? y/N" "$wt_default")
+        case "$WT_ANS" in y|Y|yes|YES) WORKTREES="1" ;; *) WORKTREES="" ;; esac
+      fi
+      ;;
+  esac
 
   if [ -z "$PONYTAIL" ]; then
     pt_default=y
@@ -185,7 +204,24 @@ if [ -z "$GRAPHIFY" ]; then GRAPHIFY="1"; fi
 
 case "$PACK" in
   agents-opencode|superpowers|none) ;;
-  *) die "invalid --pack '$PACK' (agents-opencode|superpowers|none)" ;;
+  agents-opencode@*)
+    ver="${PACK#agents-opencode@}"
+    case "$ver" in
+      latest) ;;
+      *)
+        printf '%s' "$ver" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+([-+][0-9A-Za-z.-]+)?$' \
+          || die "invalid agents-opencode version '$ver' (exact x.y.z or latest)"
+        ;;
+    esac
+    ;;
+  superpowers@*)
+    tag="${PACK#superpowers@}"
+    case "$tag" in
+      latest) ;;
+      ""|*[!A-Za-z0-9._/-]*) die "invalid superpowers tag '$tag' (git tag or latest)" ;;
+    esac
+    ;;
+  *) die "invalid --pack '$PACK' (agents-opencode[@x.y.z] | superpowers[@tag] | none)" ;;
 esac
 case "$WORKTREES" in
   ""|off|0) WORKTREES="" ;;
@@ -202,10 +238,14 @@ case "$GRAPHIFY" in
   0|off) GRAPHIFY="0" ;;
   *) die "invalid --graphify '$GRAPHIFY' (on|off)" ;;
 esac
-if [ "$PACK" = "superpowers" ] && [ -n "$WORKTREES" ]; then
-  printf 'note: superpowers manages git worktrees itself — forcing Kimaki worktrees off\n' >&2
-  WORKTREES=""
-fi
+case "$PACK" in
+  superpowers|superpowers@*)
+    if [ -n "$WORKTREES" ]; then
+      printf 'note: superpowers manages git worktrees itself — forcing Kimaki worktrees off\n' >&2
+      WORKTREES=""
+    fi
+    ;;
+esac
 [ -n "$TOKEN" ] || die "KIMAKI_BOT_TOKEN is empty — pass --token or run interactively"
 
 set_val KIMAKI_BOT_TOKEN "$TOKEN" "$AGENT_ENV"

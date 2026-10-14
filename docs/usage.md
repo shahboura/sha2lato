@@ -61,20 +61,20 @@ One **workflow pack** (mutually exclusive) plus two **extras** (both on by defau
 
 | Setting | Default | What it adds | Best when |
 |---|---|---|---|
-| `AGENT_PACK=agents-opencode` | ✅ default | 10 agent personas (orchestrator, codebase, review, planner, docs, researcher, …), 16 commands, 24 skills — all languages | You want a structured *delivery loop* with named specialists |
-| `AGENT_PACK=superpowers` | — | The [Superpowers](https://github.com/obra/superpowers) methodology: brainstorm → spec → plan → subagent-driven execution → TDD → review | You want plan-first discipline for autonomous work |
+| `AGENT_PACK=agents-opencode` | ✅ default | 10 agent personas (orchestrator, codebase, review, planner, docs, researcher, …), 16 commands, 24 skills — all languages. From npm; `@x.y.z` pins | You want a structured *delivery loop* with named specialists |
+| `AGENT_PACK=superpowers` | — | The [Superpowers](https://github.com/obra/superpowers) methodology: brainstorm → spec → plan → subagent-driven execution → TDD → review. From git; `@v7.0.0` pins | You want plan-first discipline for autonomous work |
 | `AGENT_PACK=none` | — | Nothing extra | Plain OpenCode + the baked design skills |
 | `PONYTAIL=1` | ✅ on | [Ponytail](https://github.com/DietrichGebert/ponytail): minimal-code discipline — injects the "laziest senior dev" ruleset every turn, adds `/ponytail-review`, `/ponytail-audit`, `/ponytail-debt` | Always useful; pairs with either workflow pack |
 | `GRAPHIFY=1` | ✅ on | The `graphify` CLI (baked into the image) plus a usage guide: code → queryable knowledge graph, queried instead of re-reading files | Large or unfamiliar repos, cross-cutting work |
 
 ```ini
 # in secrets/.env.agent
-AGENT_PACK=agents-opencode   # or: superpowers | none
+AGENT_PACK=agents-opencode   # or: superpowers[@tag] | none; @x.y.z pins a version
 PONYTAIL=1                   # 0 to disable
 GRAPHIFY=1                   # 0 to disable
 ```
 
-Then `docker compose -f compose/docker-compose.yml up -d`. Switching any of them later is the same one-line change + `up -d` — no rebuild.
+Then `docker compose -f compose/docker-compose.yml up -d`. Switching any of them later is the same one-line change + `up -d` — no rebuild; new pack versions fetch on first start (then cache on the volume).
 
 **Discord synergy:** Kimaki exposes the packs natively — agents appear as `/<name>-agent` switches and commands as slash commands. Try `/plan-project`, `/execution-loop`, `/checkpoint` (agents-opencode), `/ponytail-review` (ponytail), or ask *“tell me about your superpowers”* (superpowers). For graphify, just say *“graph this repo first”* when a codebase is large or unfamiliar.
 
@@ -89,11 +89,11 @@ Then `docker compose -f compose/docker-compose.yml up -d`. Switching any of them
 
 **Details:**
 
-- `agents-opencode` is baked into the image (pinned `2.6.0`); the entrypoint installs it into the global OpenCode config on first start, all languages. Verify in Discord: ask *“@orchestrator plan this”* or look for the slash commands.
+- `agents-opencode` is fetched from npm on first start into `/data/opencode/npm` (on the volume — offline starts keep working afterwards) and installed into the global OpenCode config, all languages. Bare = npm latest, re-resolved every start; `agents-opencode@x.y.z` pins exactly. Verify in Discord: ask *“@orchestrator plan this”* or look for the slash commands.
 - **Cross-directory access:** the pack ships `permission.external_directory: "deny"`; the box's entrypoint restores OpenCode's default (`"ask"`) on install, because documented flows (cloning new projects, `kimaki project add`) write outside the session's project directory. In Discord, permission asks appear as **approve buttons in the thread**. `doom_loop` stays `deny` (blocks a tool repeated identically 3× — a feature, not a bug).
-- **Pack updates:** the install marker tracks the version — bump `AGENTS_OPENCODE_VERSION`, rebuild the image, and the next start updates the installed pack on the volume automatically.
-- `superpowers` pins a git tag (`SUPERPOWERS_TAG`, default `v7.0.0`); its version-only telemetry ping is off unless you set `SUPERPOWERS_DISABLE_TELEMETRY=0`.
-- Switching packs removes the other pack's *plugin* entry automatically; to also remove `agents-opencode` files, run `agents-opencode --global --uninstall` inside the container and clear `AGENT_PACK` (otherwise it reinstalls on the next start).
+- **Pack updates:** bare packs re-check for a newer version on every start; exact pins change only when you edit them. A version-tracked marker re-installs the pack files on the volume automatically.
+- `superpowers` is fetched from git by OpenCode; bare = latest tag re-resolved each start (offline keeps the current spec), `superpowers@v7.0.0` pins exactly (needs ≥ v6.4.1 on OpenCode v2). Its version-only telemetry ping is off unless you set `SUPERPOWERS_DISABLE_TELEMETRY=0`.
+- Switching packs removes the other pack's *plugin* entry automatically; to also remove `agents-opencode` files, run `docker compose -f compose/docker-compose.yml exec agent agents-opencode --global --uninstall` and change `AGENT_PACK` (otherwise it reinstalls on the next start).
 - `ponytail` is an OpenCode **plugin** (pinned `@dietrichgebert/ponytail@5.2.0`, overridable with `PONYTAIL_SPEC`); OpenCode fetches it on first start. It layers on top of any workflow pack. `PONYTAIL=0` strips it from the config.
 - `graphify` ships baked (pinned CLI in its own venv) with a short usage guide the agent loads when exploring large codebases: build with `graphify extract .` (add `--code-only` to stay fully offline), refresh with `graphify update .`, query with `graphify query` / `path` / `explain`. Graphs are per-checkout in `graphify-out/` (keep it out of git). `GRAPHIFY=0` removes only the guide — the CLI stays available.
 

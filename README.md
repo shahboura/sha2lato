@@ -12,7 +12,7 @@ Ships as one small repo: **one custom Docker image** (Kimaki + OpenCode 2 + the 
 - 🧠 **The models you already pay for** — run `/login` in Discord and use Claude Pro/Max, ChatGPT, Gemini, or API keys
 - 🐳 **Docker-in-Docker included** — the agent can build **and run** images for Docker-based projects, isolated from the host
 - 🎨 **Design intelligence baked in** — `npm i` a UI and the agent pulls the full ui-ux-pro-max skill suite (styles, palettes, fonts, stack guides)
-- 🧭 **Workflow packs, on by default** — [agents-opencode](https://agnts.elkodr.com) (agent roster + slash commands) ships enabled; one env var switches to [Superpowers](https://github.com/obra/superpowers) (plan-first methodology) or `none`
+- 🧭 **Workflow packs, on by default** — [agents-opencode](https://agnts.elkodr.com) (agent roster + slash commands) ships enabled; one env var switches to [Superpowers](https://github.com/obra/superpowers) or `none` — and pins any version (`agents-opencode@2.6.0`, `superpowers@v7.0.0`)
 - ⚡ **Discipline + code intelligence** — [ponytail](https://github.com/DietrichGebert/ponytail) (minimal-code reviews) and [graphify](https://github.com/Graphify-Labs/graphify) (queryable knowledge graphs of any repo) are on by default and toggleable
 - 🔐 **Self-hosted everything** — your bot identity, your machine, your git hosts (Forgejo, GitHub, or both)
 - 🚀 **CI/CD included** — multi-arch images (`linux/amd64` + `linux/arm64`) published to GHCR and/or your Forgejo registry, deployed over SSH, rebuilt weekly for CVE freshness

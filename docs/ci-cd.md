@@ -78,7 +78,8 @@ docker image prune -f
 |---|---|
 | Base image + system packages | Weekly rebuild pulls the newest `node:24-slim` and apt state; both pipelines republish `:latest` and deploy |
 | kimaki / ui-ux-pro-max-cli (npm) | Installed `@latest` at build time — the weekly rebuild refreshes them. Build args can pin versions for reproducible builds instead |
-| agents-opencode pack (npm) | Pinned via the `AGENTS_OPENCODE_VERSION` build arg (**manual bump** — Renovate doesn't manage npm installs inside the Dockerfile). After a bump + rebuild, the entrypoint auto-updates the installed pack on the volume (version-tracked marker) |
+| agents-opencode pack (npm) | Runtime-fetched by the entrypoint, not baked: bare `AGENT_PACK=agents-opencode` tracks npm latest on every container start; pin `agents-opencode@x.y.z` to lock the version (fetched with lifecycle scripts disabled). Cached on the volume; offline starts use the cached copy — the log warns if it differs from a freshly pinned version |
+| superpowers plugin (git) | Runtime-fetched by OpenCode from a git tag: bare = latest tag re-resolved each start; pin `superpowers@v7.0.0` for exactness |
 | graphify CLI (pip `graphifyy`) | Pinned via `GRAPHIFY_VERSION` (manual bump); optional backends via `GRAPHIFY_EXTRAS` (empty = core only). Installed into its own venv at build time |
 | ponytail plugin (npm) | Pinned in the entrypoint (`PONYTAIL_SPEC`, default `@dietrichgebert/ponytail@5.2.0`); OpenCode fetches it on first start — bump the spec to update |
 | OpenCode | Installed from the official v2 install script at build time (Kimaki requires ≥ 2.0.19; it never pins) |
@@ -104,7 +105,7 @@ The `lint` jobs run these images, pinned `tag@digest` (immutable):
 Everything this repo builds or runs is pinned or first-party, and was verified against upstream registries:
 
 - **Agent image**: base `node:24-slim` (Docker Official); Docker CLI/buildx/compose from Docker's official apt repo; [kimaki](https://github.com/remorses/kimaki) (MIT), [ui-ux-pro-max-cli](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill) (MIT), [OpenCode](https://github.com/anomalyco/opencode) (MIT) from their official release channels.
-- **Workflow pack**: [agents-opencode](https://github.com/shahboura/agents-opencode) (MIT; npm `agents-opencode@2.6.0` pinned via build arg; npm provenance attestations via GitHub Actions OIDC trusted publishing).
+- **Workflow packs** (runtime-fetched by the entrypoint/OpenCode, never baked): [agents-opencode](https://github.com/shahboura/agents-opencode) (MIT; npm; exact pins supported; npm verifies tarball integrity; fetches run with lifecycle scripts disabled; provenance attestations via GitHub Actions OIDC trusted publishing) and [superpowers](https://github.com/obra/superpowers) (MIT; git, tag-pinned).
 - **Extras**: [ponytail](https://github.com/DietrichGebert/ponytail) (MIT; npm plugin, pinned spec) and [graphify](https://github.com/Graphify-Labs/graphify) (Apache-2.0; PyPI `graphifyy`, pure-Python wheel, pinned build arg).
 - **CI tooling**: actionlint (MIT), hadolint (GPL-3.0), shellcheck (GPL-3.0) — GPL tools are invoked as separate processes only; nothing is linked or redistributed. All three pinned by digest.
 - **Forgejo job image**: Docker Official `node:24-bookworm` + Docker's apt repo (official-only reference); community act image documented as an alternative.

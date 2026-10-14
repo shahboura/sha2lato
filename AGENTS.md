@@ -40,12 +40,14 @@ weekly CVE-fresh rebuilds. Public repo (MIT), fork-friendly.
 
 Complete and review-gated (4 adversarial cycles incl. a dedicated security
 pass, plus parallel-agent validation; all findings resolved): agent image
-(kimaki + opencode 2 + ui-ux-pro-max + agents-opencode pack, plus ponytail and
-graphify) built down to ~1.6 GB,
+(kimaki + opencode 2 + ui-ux-pro-max substrate, plus ponytail and graphify)
+built down to ~1.6 GB,
 compose stack (agent + DinD, explicit volume names), secrets + age overlay,
 GitHub + Forgejo CI (multi-arch, weekly rebuild, fork-safe), host
-bootstrap/update/configure scripts, 10 scoped docs. `AGENT_PACK` defaults to
-`agents-opencode` (also `superpowers` | `none`); `PONYTAIL=1` and
+bootstrap/update/configure scripts, 10 scoped docs. `AGENT_PACK` uses a
+`pack[@version]` grammar — `agents-opencode` (default; bare = npm latest,
+fetched at runtime to the volume) / `superpowers` (bare = latest git tag) /
+`none`, exact pins supported; `PONYTAIL=1` and
 `GRAPHIFY=1` extras are on by default and toggleable; agent commits use a
 baked identity (`sha2lato agent`) and can be SSH-signed via `GIT_SIGN=1`
 (`SHA2LATO_AGENT_IMAGE` selection → docs/configuration.md → Deployment
@@ -110,3 +112,23 @@ Commits may be SSH-signed (git ≥ 2.34: `gpg.format ssh` + `user.signingkey` +
   (adversarial + security, parallel): both GO/SAFE-TO-COMMIT; smoke tests
   proved a signed commit object inside the image. Review fixes applied
   (option-safe config values, Forgejo key semantics, verification wording).
+- **2026-10-15 (session 2):** Consolidated the workflow-pack config into one
+  grammar — `AGENT_PACK=<pack>[@<version>]` — removing the coupled knobs:
+  `SUPERPOWERS_TAG` (deprecation warning if still set) and the
+  `AGENTS_OPENCODE_VERSION` build arg (pack no longer baked; fetched at
+  runtime into `/data/opencode/npm`, bare = npm latest re-resolved each
+  start, offline falls back to the cached copy). superpowers bare = latest
+  git tag; spec upsert now replaces prior entries so tag switches converge.
+  DRY'd three duplicated jq plugin merges into
+  `set_plugin_spec`/`remove_plugin_specs` helpers. Validated: lint-sim ALL
+  CLEAN, 57 doc links resolve, image rebuilt (1.72 GB), 11/11 container smoke
+  checks pass (offline warm/cold, tag-switch convergence, invalid values,
+  deprecation, uninstall). Review gate (adversarial + security, parallel)
+  cycle 1 — fixes applied: `AGENT_PACK=none` now strips the superpowers entry;
+  exclusivity strip gated on the agents pack being healthy; empty-suffix `@`
+  warnings; git-ref validation (`sp_tag_ok`) on superpowers pins AND resolved
+  tags; latest excludes prereleases; `--ignore-scripts` on the npm fetch;
+  atomic same-volume config writes; `XDG_CACHE_HOME` on the volume (plugin
+  clones offline-safe). Re-verified: lint-sim CLEAN + 10-check fresh smoke
+  matrix (none-strip, invalid-pin keeps superpowers, empty suffixes, `..`
+  rejected, --ignore-scripts install, cache env).

@@ -3,9 +3,12 @@
 #
 # Design notes:
 # - Base: node:24-slim (Debian) — the same base Kimaki's own Dockerfile uses.
-# - Everything installs at build time; weekly CI rebuilds keep it fresh (CVEs).
-# - Versions default to "latest" but can be pinned via build args for
-#   reproducible builds.
+# - The runtime substrate installs at build time; weekly CI rebuilds keep it
+#   fresh (CVEs). Workflow packs (AGENT_PACK) are NOT baked — the entrypoint
+#   fetches them at runtime (npm/git) into the volume, so pack versions are
+#   configuration, not build args.
+# - Substrate versions default to "latest" but can be pinned via build args
+#   for reproducible builds.
 # - State (kimaki.db, OpenCode sessions/auth, projects) lives on the /data
 #   volume, NOT in the image — rebuilds never log you out.
 # - The ui-ux-pro-max skill is baked into /opt/skills and synced into the
@@ -18,7 +21,6 @@ ARG DEBIAN_FRONTEND=noninteractive
 # Pin for reproducible builds; "latest" by design (weekly rebuilds refresh)
 ARG KIMAKI_VERSION=latest
 ARG UIPRO_VERSION=latest
-ARG AGENTS_OPENCODE_VERSION=2.6.0
 ARG GRAPHIFY_VERSION=0.9.90
 # Optional graphify backends, comma-separated (e.g. "leiden,mcp"); empty = core only
 ARG GRAPHIFY_EXTRAS=
@@ -49,10 +51,11 @@ RUN set -eux; \
     apt-get clean; \
     rm -rf /var/lib/apt/lists/*
 
-# ── Kimaki + ui-ux-pro-max CLI + agents-opencode pack ──────────────────────
+# ── Kimaki + ui-ux-pro-max CLI (runtime substrate) ─────────────────────────
+# Workflow packs are fetched by the entrypoint at runtime, not baked here.
 # The npm cache is purged in the SAME layer: Docker layers are additive, so a
 # later `rm` would not reclaim it — without this it adds ~680 MB to the image.
-RUN npm install -g kimaki@${KIMAKI_VERSION} ui-ux-pro-max-cli@${UIPRO_VERSION} agents-opencode@${AGENTS_OPENCODE_VERSION} \
+RUN npm install -g kimaki@${KIMAKI_VERSION} ui-ux-pro-max-cli@${UIPRO_VERSION} \
     && npm cache clean --force \
     && rm -rf /root/.npm
 
@@ -61,9 +64,12 @@ RUN curl -fsSL https://opencode.ai/v2/install | bash
 ENV PATH="/root/.opencode/bin:${PATH}"
 
 # ── Keep OpenCode state on the /data volume ────────────────────────────────
+# XDG_CACHE_HOME keeps fetched plugin clones (e.g. superpowers) on the volume
+# too — offline starts after a container recreate keep working.
 ENV XDG_DATA_HOME=/data/opencode/data \
     XDG_STATE_HOME=/data/opencode/state \
-    XDG_CONFIG_HOME=/data/opencode/config
+    XDG_CONFIG_HOME=/data/opencode/config \
+    XDG_CACHE_HOME=/data/opencode/cache
 
 # Some tools (e.g. the agents-opencode installer) target ~/.config/opencode
 # regardless of XDG_CONFIG_HOME — symlink it onto the volume-backed XDG path
