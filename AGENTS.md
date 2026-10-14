@@ -46,10 +46,11 @@ compose stack (agent + DinD, explicit volume names), secrets + age overlay,
 GitHub + Forgejo CI (multi-arch, weekly rebuild, fork-safe), host
 bootstrap/update/configure scripts, 10 scoped docs. `AGENT_PACK` defaults to
 `agents-opencode` (also `superpowers` | `none`); `PONYTAIL=1` and
-`GRAPHIFY=1` extras are on by default and toggleable; `SHA2LATO_AGENT_IMAGE`
-selects build-on-host vs pull-from-registry (docs/configuration.md →
-Deployment modes). Pushed to GitHub (public): CI green, multi-arch image
-published to GHCR. Forgejo leg deferred.
+`GRAPHIFY=1` extras are on by default and toggleable; agent commits use a
+baked identity (`sha2lato agent`) and can be SSH-signed via `GIT_SIGN=1`
+(`SHA2LATO_AGENT_IMAGE` selection → docs/configuration.md → Deployment
+modes). Pushed to GitHub (public): CI green, multi-arch image published to
+GHCR. Forgejo leg deferred.
 
 ## Initial commit recipe (Windows authoring → Linux exec bits)
 
@@ -102,3 +103,10 @@ Commits may be SSH-signed (git ≥ 2.34: `gpg.format ssh` + `user.signingkey` +
   ci-cd pseudocode, CRLF trimming in the scripts, real volume names in docs,
   privileged-DinD notes, least-privilege workflow secret passing. Security
   audit: only `.example` files tracked, tree clean.
+- **2026-10-14 (session 1, continued 4):** Self-hosting under Arcane
+  documented end-to-end; added a baked agent commit identity
+  (`GIT_USER_NAME`/`GIT_USER_EMAIL` overrides) plus optional SSH commit
+  signing (`GIT_SIGN=1`, dedicated `secrets/ssh/signing_key`). Cycle-6 review
+  (adversarial + security, parallel): both GO/SAFE-TO-COMMIT; smoke tests
+  proved a signed commit object inside the image. Review fixes applied
+  (option-safe config values, Forgejo key semantics, verification wording).

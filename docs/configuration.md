@@ -36,6 +36,9 @@ Everything else in the repo is impersonal — fork-safe by design ([secrets.md](
 | `AGENT_PACK` | `agents-opencode` | One workflow pack: `agents-opencode`, `superpowers`, or `none` ([usage.md](usage.md)) |
 | `PONYTAIL` | `1` (on) | Minimal-code discipline plugin + `/ponytail` commands; set `0` to disable ([usage.md](usage.md)) |
 | `GRAPHIFY` | `1` (on) | Usage guide for the baked `graphify` CLI (repo → knowledge graph); set `0` to remove the guide |
+| `GIT_USER_NAME` | `sha2lato agent` | identity for agent-made commits ([usage.md](usage.md) → Commits from the agent) |
+| `GIT_USER_EMAIL` | `agent@sha2lato.local` | email for agent-made commits |
+| `GIT_SIGN` | empty (off) | `1` = SSH-sign agent commits with `secrets/ssh/signing_key` |
 | `SUPERPOWERS_TAG` | `v7.0.0` | git tag to pin when `AGENT_PACK=superpowers` (≥ v6.4.1 needed on OpenCode v2) |
 | `SUPERPOWERS_DISABLE_TELEMETRY` | `1` (off) | set `0` to allow the version-only telemetry ping |
 | `KIMAKI_WORKTREES` | empty (off) | `1` = fresh git worktree per session — **leave empty when superpowers is active** |

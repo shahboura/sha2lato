@@ -105,9 +105,13 @@ RUN set -eux; \
 # ── Bake the graphify usage guide (synced to the volume by the entrypoint) ──
 COPY skills-graphify /opt/skills-graphify
 
-# ── Layout & entrypoint ────────────────────────────────────────────────────
+# ── Layout, git identity & entrypoint ──────────────────────────────────────
+# System gitconfig gives agent-made commits a working default identity —
+# override with GIT_USER_NAME/GIT_USER_EMAIL (docs/usage.md).
 RUN test -f /opt/skills-graphify/graphify-usage/SKILL.md \
-    && mkdir -p /data/projects
+    && mkdir -p /data/projects \
+    && git config --system user.name "sha2lato agent" \
+    && git config --system user.email "agent@sha2lato.local"
 WORKDIR /data
 
 COPY entrypoint.sh /usr/local/bin/sha2lato-entrypoint

@@ -161,6 +161,33 @@ case "${PONYTAIL:-1}" in
     ;;
 esac
 
+# ── Git identity + optional SSH commit signing ─────────────────────────────
+# A default identity is baked as system gitconfig ("sha2lato agent"); override
+# with GIT_USER_NAME/GIT_USER_EMAIL. GIT_SIGN=1 enables SSH commit signing
+# when /root/.ssh/signing_key exists — add signing_key.pub as a Signing Key
+# on GitHub / your Forgejo account. See docs/usage.md → "Commits from the agent".
+# Combined key=value form: safe even if the value starts with a dash.
+if [ -n "${GIT_USER_NAME:-}" ]; then
+  git config --system "user.name=$GIT_USER_NAME" || echo "[entrypoint] WARNING: invalid GIT_USER_NAME (ignored)" >&2
+fi
+if [ -n "${GIT_USER_EMAIL:-}" ]; then
+  git config --system "user.email=$GIT_USER_EMAIL" || echo "[entrypoint] WARNING: invalid GIT_USER_EMAIL (ignored)" >&2
+fi
+case "${GIT_SIGN:-0}" in
+  1|on|true)
+    if [ -f /root/.ssh/signing_key ]; then
+      git config --system gpg.format ssh
+      git config --system user.signingkey /root/.ssh/signing_key
+      git config --system commit.gpgsign true
+      echo "[entrypoint] commit signing enabled (SSH, /root/.ssh/signing_key)"
+    else
+      echo "[entrypoint] WARNING: GIT_SIGN is set but /root/.ssh/signing_key not found — commits stay unsigned" >&2
+    fi
+    ;;
+  *)
+    ;;
+esac
+
 # ── Passthrough mode ───────────────────────────────────────────────────────
 if [ "$#" -gt 0 ]; then
   exec "$@"

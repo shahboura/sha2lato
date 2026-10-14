@@ -97,6 +97,12 @@ Then `docker compose -f compose/docker-compose.yml up -d`. Switching any of them
 - `ponytail` is an OpenCode **plugin** (pinned `@dietrichgebert/ponytail@5.2.0`, overridable with `PONYTAIL_SPEC`); OpenCode fetches it on first start. It layers on top of any workflow pack. `PONYTAIL=0` strips it from the config.
 - `graphify` ships baked (pinned CLI in its own venv) with a short usage guide the agent loads when exploring large codebases: build with `graphify extract .` (add `--code-only` to stay fully offline), refresh with `graphify update .`, query with `graphify query` / `path` / `explain`. Graphs are per-checkout in `graphify-out/` (keep it out of git). `GRAPHIFY=0` removes only the guide — the CLI stays available.
 
+## Commits from the agent
+
+Agent-made commits use a baked default identity — `sha2lato agent <agent@sha2lato.local>` — so a first commit never fails with *"please tell me who you are"*. To commit as yourself, set `GIT_USER_NAME` / `GIT_USER_EMAIL` in `secrets/.env.agent`, or let the agent set a per-project `git config`.
+
+**Signing (optional, SSH):** put a dedicated private key at `secrets/ssh/signing_key` on the host (see [secrets.md](secrets.md)), register its **public** half — GitHub: Settings → SSH and GPG keys → **Signing Key** (verification only); Forgejo: an account key, which *also* grants authentication rights, so use a dedicated forge account if that separation matters to you — then set `GIT_SIGN=1`. Commits are SSH-signed as the dedicated *agent* identity, separate from your personal signing key. Verify via the **Verified** badge on the host after pushing (`git log --show-signature` inside the box only shows a good-signature result once an allowed-signers file is configured).
+
 ## Multiple agent machines, one Discord server
 
 Scale out by running the same stack on another host — each machine keeps its own projects, sessions, and model logins, and your phone sees them side by side in one server.

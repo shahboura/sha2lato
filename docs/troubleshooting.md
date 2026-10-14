@@ -23,6 +23,8 @@ docker compose -f compose/docker-compose.yml exec agent kimaki status
 | `AGENT_PACK` / `PONYTAIL` / `GRAPHIFY` set but the feature isn't active | `docker compose -f compose/docker-compose.yml logs agent \| grep entrypoint` — the convergence lines print on every start. `agents-opencode`: delete the marker `/data/opencode/config/.agents-opencode-installed` and restart to reinstall. `ponytail`: OpenCode fetches the plugin on first start — needs network once. `graphify`: verify the CLI with `docker compose -f compose/docker-compose.yml exec agent graphify --help` |
 | `graphify: command not found` inside the container | Should not happen (the CLI is baked into the image) — rebuild the image; the entrypoint never removes it, only the usage guide |
 | Bot online but auth/model errors, token looks correct | `secrets/.env.agent` may have Windows CRLF endings — values then carry a stray `\r`. Rewrite the file with LF endings (or re-run `./deploy/configure.sh`). |
+| Agent commits fail with *"please tell me who you are"* | Update to a current image (`./deploy/update.sh` — the default identity ships in images built with it), or set `GIT_USER_NAME`/`GIT_USER_EMAIL` in `secrets/.env.agent` and `up -d` |
+| `Permissions 0644 … too open` — SSH ignores the key | Fix on the host: `chmod 600 secrets/ssh/<key>` (the mount is read-only — the container cannot fix it) |
 
 ## Docker-in-Docker (agent builds)
 

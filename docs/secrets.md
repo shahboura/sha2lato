@@ -46,6 +46,15 @@ chmod 600 secrets/ssh/id_ed25519
 ssh-keyscan -t ed25519 <your-forgejo-host> github.com > secrets/ssh/known_hosts 2>/dev/null
 ```
 
+Optional — **commit signing**: create a second, dedicated key and lock it down:
+
+```bash
+ssh-keygen -t ed25519 -f secrets/ssh/signing_key -N ""
+chmod 600 secrets/ssh/signing_key
+```
+
+Register the **public** half — GitHub: Settings → SSH and GPG keys → **Signing Key** (verification only); Forgejo: added to your account it is a normal SSH key that *also* authenticates (push/read as you) — use a dedicated forge account for a clean agent identity. Then set `GIT_SIGN=1` in `secrets/.env.agent` ([usage.md](usage.md) → Commits from the agent). Keep it separate from `id_ed25519` — one key for pushing, one for signing; always `chmod 600` on the host (the container mount is read-only and cannot fix permissions). The key is passphrase-less (headless necessity): anyone who compromises the container can mint commits that verify as the agent identity — keep the host single-tenant.
+
 Then add the **public** key (`secrets/ssh/id_ed25519.pub`) as a **deploy key** — separately on each host you use:
 
 **Forgejo:** repo → *Settings → Deploy Keys → Add.* Enable write access if the agent should push (it usually should). Repeat per repository. *(For multiple repos, consider a machine/user key instead: Forgejo user → Settings → SSH keys.)*
