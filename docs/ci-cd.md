@@ -100,7 +100,9 @@ The `lint` jobs run these images, pinned `tag@digest` (immutable):
 | hadolint | `hadolint/hadolint:v2.15.1@sha256:32dac941…` |
 | actionlint | `rhysd/actionlint:1.7.12@sha256:b1934ee5…` |
 
-**Update procedure:** `docker pull rhysd/actionlint:NEWTAG` → `docker image inspect rhysd/actionlint:NEWTAG --format '{{index .RepoDigests 0}}'` → replace both `tag` and digest in **both** `ci.yml` files (GitHub + Forgejo) and in `tmp/lint-sim.sh` if present. Renovate does not track digests inside `run:` blocks, so bumps are manual and deliberate.
+**Update procedure:** `docker pull rhysd/actionlint:NEWTAG` → `docker image inspect rhysd/actionlint:NEWTAG --format '{{index .RepoDigests 0}}'` → replace both `tag` and digest in **both** `ci.yml` files (GitHub + Forgejo) and in `test/lint-sim.sh`. Renovate does not track digests inside `run:` blocks, so bumps are manual and deliberate.
+
+**Local check:** run `test/lint-sim.sh` to reproduce this lint job (wrapper command in its header).
 
 ## Supply chain
 

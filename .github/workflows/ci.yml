@@ -23,7 +23,7 @@ jobs:
 
       - name: script exec bits (Windows-authored repo guard)
         run: |
-          for f in agent/entrypoint.sh deploy/update.sh deploy/bootstrap-host.sh deploy/age.sh deploy/configure.sh; do
+          for f in agent/entrypoint.sh deploy/update.sh deploy/bootstrap-host.sh deploy/age.sh deploy/configure.sh test/lint-sim.sh; do
             if [ ! -x "$f" ]; then
               echo "::error::$f lost its executable bit (git mode 100755 required)"
               exit 1
@@ -36,7 +36,7 @@ jobs:
         run: |
           docker run --rm -v "$PWD:/repo" --workdir /repo \
             koalaman/shellcheck:v0.11.0@sha256:61862eba1fcf09a484ebcc6feea46f1782532571a34ed51fedf90dd25f925a8d \
-            agent/entrypoint.sh deploy/*.sh
+            agent/entrypoint.sh deploy/*.sh test/lint-sim.sh
 
       - name: hadolint
         run: |

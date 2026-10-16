@@ -41,7 +41,7 @@ Grammar and behavior: [usage.md → Workflow pack + extras](usage.md#workflow-pa
 
 | Item | Upstream | Pin lives in | Updates how |
 |---|---|---|---|
-| shellcheck | [koalaman/shellcheck](https://github.com/koalaman/shellcheck) | `tag@digest` in both `ci.yml` files (+ `tmp/lint-sim.sh` if present) | manual digest bump ([procedure](ci-cd.md#linter-pinning)) |
+| shellcheck | [koalaman/shellcheck](https://github.com/koalaman/shellcheck) | `tag@digest` in both `ci.yml` files (+ `test/lint-sim.sh`) | manual digest bump ([procedure](ci-cd.md#linter-pinning)) |
 | hadolint | [hadolint/hadolint](https://github.com/hadolint/hadolint) | same | same |
 | actionlint | [rhysd/actionlint](https://github.com/rhysd/actionlint) | same | same |
 | Forgejo job image | [node:24-bookworm](https://github.com/nodejs/docker-node) (Docker Official) | digest in `.forgejo/workflows/ci.yml` (+ `runner-check.yml`) | manual digest bump |

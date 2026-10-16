@@ -15,7 +15,7 @@
 #   (community act image) documented in docs/ci-cd.md.
 # - Linters read files via stdin: job containers cannot share filesystem
 #   paths with containers created through the host socket (a `-v $PWD`
-#   mount would resolve against the HOST). Validated by tmp/lint-sim.sh.
+#   mount would resolve against the HOST). Validated by test/lint-sim.sh.
 #
 # Before first use: change the two forgejo.example.com placeholders to your
 # Forgejo host and set REGISTRY_USERNAME + REGISTRY_TOKEN repo secrets.
@@ -70,7 +70,7 @@ jobs:
 
       - name: script exec bits (Windows-authored repo guard)
         run: |
-          for f in agent/entrypoint.sh deploy/update.sh deploy/bootstrap-host.sh deploy/age.sh deploy/configure.sh; do
+          for f in agent/entrypoint.sh deploy/update.sh deploy/bootstrap-host.sh deploy/age.sh deploy/configure.sh test/lint-sim.sh; do
             if [ ! -x "$f" ]; then echo "ERROR: $f lost its executable bit (git mode 100755 required)"; exit 1; fi
           done
 
@@ -78,7 +78,7 @@ jobs:
       - name: shellcheck
         run: |
           fail=0
-          for f in agent/entrypoint.sh deploy/*.sh; do
+          for f in agent/entrypoint.sh deploy/*.sh test/lint-sim.sh; do
             echo "--- $f"
             cat "$f" | docker run --rm -i \
               koalaman/shellcheck:v0.11.0@sha256:61862eba1fcf09a484ebcc6feea46f1782532571a34ed51fedf90dd25f925a8d - || fail=1

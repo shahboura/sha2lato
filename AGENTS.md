@@ -23,9 +23,9 @@ weekly CVE-fresh rebuilds. Public repo (MIT), fork-friendly.
   args) — do not add unpinned third-party images without documenting the
   trade-off.
 - **Validate changes** (from repo root): `docker compose -f
-  compose/docker-compose.yml config --quiet`; `tmp/lint-sim.sh` (full CI-job
-  simulation — lint via the same job image + socket pattern CI uses);
-  markdown links must resolve.
+  compose/docker-compose.yml config --quiet`; `test/lint-sim.sh` (full CI-job
+  simulation — lint via the same job image + socket pattern CI uses; copy the
+  wrapper command from its header); markdown links must resolve.
 - **Verify + review:** every change gets the review cycle (fresh lenses)
   before commit; external claims — CLI flags, APIs, upstream syntax — are
   confirmed against current upstream docs, not memory.
@@ -143,4 +143,8 @@ Commits may be SSH-signed (git ≥ 2.34: `gpg.format ssh` + `user.signingkey` +
   Renovate cron syntax (Later syntax deprecated), npm-integrity wording.
   Verified against current upstream docs: npm flags, git `ls-remote`/`sort` +
   `check-ref-format`, Renovate docker-compose manager + `pinDigests`, OpenCode
-  plugin spec, dind TLS pattern, XDG `XDG_CACHE_HOME`.
+  plugin spec, dind TLS pattern, XDG `XDG_CACHE_HOME`. Promoted the local lint
+  simulation from gitignored `tmp/` into versioned `test/lint-sim.sh`, wired
+  into both CI lint jobs (GitHub + Forgejo: shellcheck lists + exec-bit
+  guards) — its digest pins now live in a tracked file; `tmp/` is scratch-only
+  again.
