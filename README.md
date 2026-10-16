@@ -63,6 +63,7 @@ Full walkthroughs: [docs/](docs/README.md).
 | Secrets, SSH keys, fork guide | [docs/secrets.md](docs/secrets.md) |
 | Configuration — every knob in one place | [docs/configuration.md](docs/configuration.md) |
 | CI/CD — both pipelines, registries, deploys | [docs/ci-cd.md](docs/ci-cd.md) |
+| Upstream index — every dependency + how it updates | [docs/upstreams.md](docs/upstreams.md) |
 | Using it from your phone (day 2) | [docs/usage.md](docs/usage.md) |
 | Optional self-hosted GitHub runner | [docs/github-runner.md](docs/github-runner.md) |
 | Running it under a UI (Arcane) | [docs/arcane.md](docs/arcane.md) |

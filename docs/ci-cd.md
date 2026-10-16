@@ -74,6 +74,8 @@ docker image prune -f
 
 ## Freshness strategy (CVE hygiene)
 
+Component-by-component map — upstream repo, license, pin location, update lane: [upstreams.md](upstreams.md). This section explains the CI machinery behind it.
+
 | Layer | How it stays fresh |
 |---|---|
 | Base image + system packages | Weekly rebuild pulls the newest `node:24-slim` and apt state; both pipelines republish `:latest` and deploy |

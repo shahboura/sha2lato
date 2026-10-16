@@ -44,7 +44,7 @@ pass, plus parallel-agent validation; all findings resolved): agent image
 built down to ~1.6 GB,
 compose stack (agent + DinD, explicit volume names), secrets + age overlay,
 GitHub + Forgejo CI (multi-arch, weekly rebuild, fork-safe), host
-bootstrap/update/configure scripts, 10 scoped docs. `AGENT_PACK` uses a
+bootstrap/update/configure scripts, 11 scoped docs. `AGENT_PACK` uses a
 `pack[@version]` grammar — `agents-opencode` (default; bare = npm latest,
 fetched at runtime to the volume) / `superpowers` (bare = latest git tag) /
 `none`, exact pins supported; `PONYTAIL=1` and
@@ -131,4 +131,6 @@ Commits may be SSH-signed (git ≥ 2.34: `gpg.format ssh` + `user.signingkey` +
   atomic same-volume config writes; `XDG_CACHE_HOME` on the volume (plugin
   clones offline-safe). Re-verified: lint-sim CLEAN + 10-check fresh smoke
   matrix (none-strip, invalid-pin keeps superpowers, empty suffixes, `..`
-  rejected, --ignore-scripts install, cache env).
+  rejected, --ignore-scripts install, cache env). Follow-ups: runtime-pack pin
+  note in `docs/arcane.md` and a new `docs/upstreams.md` component/update-lane
+  index (cross-linked from README + ci-cd).

@@ -13,3 +13,4 @@ New here? Read **1 → 2**, run `./deploy/configure.sh`, and you're running in ~
 | 7 | [GitHub runner (optional)](github-runner.md) | Enabling the self-hosted GitHub runner profile |
 | 8 | [Deploy with Arcane](arcane.md) | Running the stack under a Docker management UI: two recipes, the one-owner rule, UI shell access |
 | 9 | [Troubleshooting](troubleshooting.md) | Symptom → cause → fix tables for every subsystem |
+| 10 | [Upstreams](upstreams.md) | Every dependency: upstream repo, license, pin location, and the four update lanes — plus a full-refresh checklist |
