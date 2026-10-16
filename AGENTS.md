@@ -150,4 +150,7 @@ Commits may be SSH-signed (git ≥ 2.34: `gpg.format ssh` + `user.signingkey` +
   again. Sandbox full-stack close-the-gap test caught + fixed a real DinD
   networking bug (the `dind` service lacked the `docker` network alias that
   `DOCKER_HOST` expects — agent→DinD was unreachable); fix verified live
-  including `docker run --rm hello-world` through DinD.
+  including `docker run --rm hello-world` through DinD. Stage B (full-stack,
+  throwaway volumes): fresh compose up → DinD + agent healthy → pack fetched
+  (2.6.0, npm latest) → kimaki `gateway shard 0 ready` (self-hosted mode;
+  guilds pending invite) → torn down + volumes wiped.

@@ -65,4 +65,4 @@ Grammar and behavior: [usage.md → Workflow pack + extras](usage.md#workflow-pa
 
 ## Last verified build
 
-2026-10-15, `sha2lato-agent:local` (linux/amd64): kimaki 1.0.0 · ui-ux-pro-max-cli 2.15.0 · OpenCode v2.0.28 · python 3.11.2 · docker CLI 29.9.0 · git 2.39.5.
+2026-10-16, `sha2lato-agent:local` (linux/amd64): kimaki 1.1.0 · ui-ux-pro-max-cli 2.15.0 · OpenCode v2.0.30 · python 3.11.2 · docker CLI 29.9.1 · git 2.39.5 — full stack exercised end-to-end (compose → DinD → Discord gateway).
