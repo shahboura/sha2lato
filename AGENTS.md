@@ -26,6 +26,9 @@ weekly CVE-fresh rebuilds. Public repo (MIT), fork-friendly.
   compose/docker-compose.yml config --quiet`; `tmp/lint-sim.sh` (full CI-job
   simulation — lint via the same job image + socket pattern CI uses);
   markdown links must resolve.
+- **Verify + review:** every change gets the review cycle (fresh lenses)
+  before commit; external claims — CLI flags, APIs, upstream syntax — are
+  confirmed against current upstream docs, not memory.
 - **Docs:** main `README.md` is marketing-flavored; `docs/*.md` are practical
   and scoped. Update the docs index when adding a doc. Diagrams use Mermaid
   (renders natively on GitHub and Forgejo).
@@ -133,4 +136,11 @@ Commits may be SSH-signed (git ≥ 2.34: `gpg.format ssh` + `user.signingkey` +
   matrix (none-strip, invalid-pin keeps superpowers, empty suffixes, `..`
   rejected, --ignore-scripts install, cache env). Follow-ups: runtime-pack pin
   note in `docs/arcane.md` and a new `docs/upstreams.md` component/update-lane
-  index (cross-linked from README + ci-cd).
+  index (cross-linked from README + ci-cd). Cycle-2 review (docs batch +
+  upstream-doc verification) — fixed: index accuracy (`up -d` not restart for
+  env changes, deploy semantics, `tmp/lint-sim.sh`/`runner-check.yml`
+  locations, host Docker apt wording), `sp_tag_ok` leading-dash guard,
+  Renovate cron syntax (Later syntax deprecated), npm-integrity wording.
+  Verified against current upstream docs: npm flags, git `ls-remote`/`sort` +
+  `check-ref-format`, Renovate docker-compose manager + `pinDigests`, OpenCode
+  plugin spec, dind TLS pattern, XDG `XDG_CACHE_HOME`.

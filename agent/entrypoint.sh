@@ -109,7 +109,7 @@ remove_plugin_specs() {
 # operator pins AND to tags resolved from the network.
 sp_tag_ok() {
   case "$1" in
-    ""|*[!A-Za-z0-9._/-]*) return 1 ;;
+    ""|-*|*[!A-Za-z0-9._/-]*) return 1 ;;
   esac
   git check-ref-format "refs/tags/$1" >/dev/null 2>&1
 }

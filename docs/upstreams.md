@@ -1,15 +1,15 @@
 # Upstream index
 
-Every component this box pulls from upstream — what it is, where its version is controlled, and which update lane keeps it fresh. One page, so refreshing the whole stack is a checklist instead of archaeology. Licenses and provenance verification live in [ci-cd.md → Supply chain](ci-cd.md#supply-chain).
+Every versioned component this box pulls from upstream — what it is, where its version is controlled, and which update lane keeps it fresh. One page, so refreshing the whole stack is a checklist instead of archaeology. Licenses and provenance verification live in [ci-cd.md → Supply chain](ci-cd.md#supply-chain).
 
 ## Update lanes (the short version)
 
 | Lane | Covers | What you do |
 |---|---|---|
 | **Automatic** | CI actions + pinned Docker images | merge Renovate PRs (Mondays) |
-| **Scheduled** | Floating build-time deps: base image, apt, kimaki, ui-ux-pro-max, OpenCode, Docker CLI | nothing — the weekly `rebuild.yml` republishes `:latest`; redeploy on the host (or Arcane → Redeploy) picks it up |
-| **Manual** | Deliberate pins: graphify CLI, linter digests, ponytail default spec | bump the pin, rebuild/redeploy |
-| **Runtime** | Workflow packs + ponytail plugin — no rebuild at all | edit `AGENT_PACK` / `PONYTAIL_SPEC` in `secrets/.env.agent` (or the Arcane `.env` editor) + restart |
+| **Scheduled** | Floating build-time deps: base image, apt, kimaki, ui-ux-pro-max, OpenCode, Docker CLI | nothing on CI-deployed hosts — the weekly rebuild republishes `:latest` **and deploys it** (GitHub `rebuild.yml`; Forgejo: cron in `.forgejo/workflows/ci.yml`). No CI deploy: `./deploy/update.sh` (Arcane: **Redeploy**) |
+| **Manual** | Deliberate pins: graphify CLI, ponytail default, linter + Forgejo job-image digests | bump the pin — workflow pins are commit-only; image pins also need a rebuild/redeploy |
+| **Runtime** | Workflow packs + ponytail plugin — no rebuild at all | edit `AGENT_PACK` / `PONYTAIL_SPEC` in `secrets/.env.agent` (or the Arcane `.env` editor) + `up -d` to recreate — env files are re-read on recreate, not on a plain restart (Arcane: **Redeploy**) |
 
 ## Image substrate (build-time — `agent/Dockerfile`)
 
@@ -41,17 +41,17 @@ Grammar and behavior: [usage.md → Workflow pack + extras](usage.md#workflow-pa
 
 | Item | Upstream | Pin lives in | Updates how |
 |---|---|---|---|
-| shellcheck | [koalaman/shellcheck](https://github.com/koalaman/shellcheck) | `tag@digest` in both `ci.yml` files (+ `tmp/lint-sim.sh`) | manual digest bump ([procedure](ci-cd.md#linter-pinning)) |
+| shellcheck | [koalaman/shellcheck](https://github.com/koalaman/shellcheck) | `tag@digest` in both `ci.yml` files (+ `tmp/lint-sim.sh` if present) | manual digest bump ([procedure](ci-cd.md#linter-pinning)) |
 | hadolint | [hadolint/hadolint](https://github.com/hadolint/hadolint) | same | same |
 | actionlint | [rhysd/actionlint](https://github.com/rhysd/actionlint) | same | same |
-| Forgejo job image | [node:24-bookworm](https://github.com/nodejs/docker-node) (Docker Official) | digest in `.forgejo/workflows/ci.yml` | manual digest bump |
+| Forgejo job image | [node:24-bookworm](https://github.com/nodejs/docker-node) (Docker Official) | digest in `.forgejo/workflows/ci.yml` (+ `runner-check.yml`) | manual digest bump |
 | GitHub Actions | [actions/*](https://github.com/actions), [docker/*](https://github.com/docker) | pinned tags in `.github/workflows/` | Renovate (pinDigests) |
 
 ## Host-level
 
 | Item | Upstream | Notes |
 |---|---|---|
-| Docker Engine + Compose plugin | [Docker's apt repo](https://docs.docker.com/engine/install/debian/) | installed by `bootstrap-host.sh`; refresh with the distro |
+| Docker Engine + Compose plugin | [Docker's apt repo](https://docs.docker.com/engine/install/debian/) | installed by `bootstrap-host.sh` from Docker's repo; refresh with `apt upgrade` — not auto-covered by unattended-upgrades' default origins |
 | age (optional secrets overlay) | [FiloSottile/age](https://github.com/FiloSottile/age) | **not** installed by this repo — `deploy/age.sh` requires it (distro package or upstream release) |
 | Host OS security updates | — | `unattended-upgrades`, enabled by `bootstrap-host.sh` |
 
@@ -59,7 +59,7 @@ Grammar and behavior: [usage.md → Workflow pack + extras](usage.md#workflow-pa
 
 1. **Merge Renovate PRs** — actions, docker images (dind, base, runner).
 2. **Bump manual pins if wanted** — `GRAPHIFY_VERSION`, linter digests ([procedure](ci-cd.md#linter-pinning)), Forgejo job-image digest, ponytail default spec.
-3. **Rebuild / redeploy** — `./deploy/update.sh` on the host; CI-only users: the Monday rebuild does it (or dispatch `rebuild.yml`); Arcane users: **Redeploy**.
+3. **Rebuild / redeploy** — `./deploy/update.sh` on the host; CI-deployed users get it from the weekly rebuild (GitHub `rebuild.yml` / Forgejo cron) or dispatch it manually; Arcane users: **Redeploy**.
 4. **Runtime packs** — bare values are already current (re-resolved at every container start); exact pins apply on the next start.
 5. **Verify** — CI green, then watch the entrypoint convergence lines in the logs ([troubleshooting.md](troubleshooting.md)).
 

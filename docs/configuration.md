@@ -34,7 +34,7 @@ Everything else in the repo is impersonal — fork-safe by design ([secrets.md](
 | `KIMAKI_BOT_TOKEN` | **(required)** | your Discord bot token ([discord-bot.md](discord-bot.md)) |
 | `MACHINE_NAME` | `sha2lato` | Discord category `Kimaki <name>` this machine owns |
 | `AGENT_PACK` | `agents-opencode` | One workflow pack, version-pinnable: `agents-opencode[@x.y.z]`, `superpowers[@tag]`, or `none`. Bare = latest (re-resolved each start) ([usage.md](usage.md)) |
-| `PONYTAIL` | `1` (on) | Minimal-code discipline plugin + `/ponytail` commands; set `0` to disable ([usage.md](usage.md)) |
+| `PONYTAIL` | `1` (on) | Minimal-code discipline plugin + `/ponytail` commands; set `0` to disable; spec override via `PONYTAIL_SPEC` ([usage.md](usage.md)) |
 | `GRAPHIFY` | `1` (on) | Usage guide for the baked `graphify` CLI (repo → knowledge graph); set `0` to remove the guide |
 | `GIT_USER_NAME` | `sha2lato agent` | identity for agent-made commits ([usage.md](usage.md) → Commits from the agent) |
 | `GIT_USER_EMAIL` | `agent@sha2lato.local` | email for agent-made commits |
