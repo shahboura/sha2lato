@@ -45,6 +45,10 @@ services:
     restart: unless-stopped
     privileged: true
     command: ["--host=tcp://0.0.0.0:2376", "--tlsverify"]
+    networks:
+      default:
+        aliases:
+          - docker
     environment:
       DOCKER_TLS_CERTDIR: /certs
       DOCKER_HOST: tcp://localhost:2376

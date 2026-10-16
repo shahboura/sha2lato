@@ -50,6 +50,12 @@ services:
     privileged: true
     # TLS daemon on 2376 (entrypoint default host/tls); certs into /certs
     command: ["--host=tcp://0.0.0.0:2376", "--tlsverify"]
+    # The agent reaches this daemon as `docker:2376` (DOCKER_HOST below);
+    # the service is named `dind`, so register the matching network alias.
+    networks:
+      default:
+        aliases:
+          - docker
     environment:
       DOCKER_TLS_CERTDIR: /certs
       # Only so the in-container healthcheck CLI can reach the daemon

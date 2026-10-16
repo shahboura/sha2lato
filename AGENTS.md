@@ -147,4 +147,7 @@ Commits may be SSH-signed (git ≥ 2.34: `gpg.format ssh` + `user.signingkey` +
   simulation from gitignored `tmp/` into versioned `test/lint-sim.sh`, wired
   into both CI lint jobs (GitHub + Forgejo: shellcheck lists + exec-bit
   guards) — its digest pins now live in a tracked file; `tmp/` is scratch-only
-  again.
+  again. Sandbox full-stack close-the-gap test caught + fixed a real DinD
+  networking bug (the `dind` service lacked the `docker` network alias that
+  `DOCKER_HOST` expects — agent→DinD was unreachable); fix verified live
+  including `docker run --rm hello-world` through DinD.
