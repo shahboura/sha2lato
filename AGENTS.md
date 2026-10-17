@@ -154,3 +154,24 @@ Commits may be SSH-signed (git ≥ 2.34: `gpg.format ssh` + `user.signingkey` +
   throwaway volumes): fresh compose up → DinD + agent healthy → pack fetched
   (2.6.0, npm latest) → kimaki `gateway shard 0 ready` (self-hosted mode;
   guilds pending invite) → torn down + volumes wiped.
+- **2026-10-17 (session 3):** Discord onboarding docs + permission normalization.
+  (1) `docs/discord-bot.md`: added a "What you need on Discord" mental model and
+  step 0 (create your server) — the assumed-knowledge gap; docs index row
+  updated. (2) Entrypoint: new `normalize_external_directory()` converges the
+  global `external_directory` rule to OpenCode v2's canonical `permissions`
+  array (`{"action":"external_directory","resource":"*","effect":"ask"}`,
+  appended last — last-match-wins) on every start; drops the pack's blanket
+  deny and the legacy v1 `external_directory` entry (deprecated `permission`
+  key only when empty; unrelated rules/keys survive); never-abort guards. Root
+  cause: agents-opencode 3.0.0 writes the v2 array with `deny` — silently
+  blocking cross-directory flows (a deny cannot be overridden by Discord
+  buttons). Validated: 8-case dash harness in the agent image (caught + fixed a
+  real jq nesting bug; idempotency + `set -e` survival test), shellcheck +
+  lint-sim ALL CLEAN, compose config, doc links; review gate (adversarial +
+  security) — no blockers, all findings applied. Investigations (no changes):
+  `docker:29-dind` log warnings all expected upstream (embedded containerd,
+  nft/fsverity benign); kimaki "3 catalog shortcuts" benign (skills dropped
+  first at Discord's 100 cap); OpenCode version drift = build-time latest +
+  runtime self-update. Open: deployment shows a persistent `docker`-hostname
+  DNS failure from the agent container (suspect the deployed compose predates
+  the dind `docker` alias) + the permission fix needs redeploy there.

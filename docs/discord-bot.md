@@ -1,6 +1,24 @@
 # Self-hosting your Discord bot
 
-sha2lato uses a **self-hosted bot**: you create your own Discord application, so the bot identity, avatar, and permissions are entirely under your control. It takes about five minutes.
+sha2lato uses a **self-hosted bot**: you create your own Discord application, so the bot identity, avatar, and permissions are entirely under your control. It takes about five minutes — plus one extra if you don't have a Discord server yet (step 0).
+
+## What you need on Discord
+
+Three things — only the last one is a machine you host; the rest are free and live on Discord's cloud:
+
+- **A Discord server** — Discord's word for a *workspace* (the channel list in the app's sidebar). It is **not** a machine you run or pay for. Kimaki lives inside one: each project becomes a channel, each session a thread. A **dedicated server for agents** is recommended.
+- **A bot application** — your bot's identity (name, avatar, token), created in the [Developer Portal](https://discord.com/developers/applications) in step 1. Free.
+- **This box** — the sha2lato stack on your Linux host. It connects *out* to Discord: no inbound ports, nothing exposed.
+
+> 💡 The server **is** the control surface — you drive the agent from it (phone or desktop), while the box does the work. No server yet? Step 0 takes under a minute.
+
+## 0. Create your server (skip if you already have one)
+
+1. In the Discord app, click **+** at the bottom of the left-hand server list → **Create My Own** → pick any option (**For me and my friends** is fine; skipping is fine too).
+   *(If + is hidden under a long server list, scroll the list down to find it.)*
+2. Enter a name (e.g. `Agents`) → **Create**.
+
+You're now the server owner — which includes the **Manage Server** permission needed to add the bot in step 3. Reference: [How do I create a server?](https://support.discord.com/hc/en-us/articles/204849977) *(Discord Help Center)*.
 
 ## 1. Create the application
 
@@ -43,7 +61,7 @@ Kimaki derives your bot's invite URL from the token:
 docker compose -f compose/docker-compose.yml exec agent kimaki bot install-url
 ```
 
-Open the printed URL in a browser logged into Discord, pick your server (create a **dedicated server** for agents — recommended), and **Authorize**. The URL requests exactly the permissions Kimaki needs:
+Open the printed URL in a browser logged into Discord, pick your server (a **dedicated server for agents** is recommended — see step 0), and **Authorize**. The URL requests exactly the permissions Kimaki needs:
 
 > View Channels, Manage Channels, Send Messages, Send Messages in Threads, Create Public Threads, Manage Threads, Read Message History, Attach Files, Add Reactions — plus the `applications.commands` scope for slash commands.
 

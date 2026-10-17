@@ -114,6 +114,43 @@ sp_tag_ok() {
   git check-ref-format "refs/tags/$1" >/dev/null 2>&1
 }
 
+# Normalize cross-directory access to "ask" — OpenCode v2 evaluates permission
+# rules in order (last match wins) and its canonical shape is the `permissions`
+# array (`permission` is the deprecated v1 key). The fetched agents-opencode
+# pack ships a blanket external_directory "deny": that would silently block
+# this box's documented flows (new-project clones and `kimaki project add`
+# write outside the session's project dir), while "ask" surfaces kimaki's
+# Accept / Accept Always / Deny buttons in Discord. Runs on every start
+# (idempotent): drop the legacy v1 external_directory entry (and the deprecated
+# `permission` object itself, once nothing else is left in it), drop any
+# external_directory rules from the v2 array, and append the canonical ask rule
+# LAST. Other rules — v2 array entries and unrelated v1 keys — are left
+# untouched. Per-agent permissions and "Accept Always" saved approvals remain
+# the override levers.
+normalize_external_directory() {
+  [ -f "$CONF" ] || return 0
+  if ! command -v jq >/dev/null 2>&1; then
+    echo "[entrypoint] WARNING: jq unavailable — add {\"action\":\"external_directory\",\"resource\":\"*\",\"effect\":\"ask\"} to the .permissions array in $CONF manually" >&2
+    return 0
+  fi
+  TMP="$(mktemp "$CONF_DIR/.opencode.json.XXXXXX")" || { echo "[entrypoint] WARNING: cannot create a temp file in $CONF_DIR — will retry next start" >&2; return 0; }
+  if jq 'if (.permission | type) == "object" then del(.permission.external_directory) else . end
+        | if (.permission | type) == "object" then (if (.permission | length) == 0 then del(.permission) else . end) else . end
+        | .permissions = (((.permissions // []) | map(select(if type == "object" then .action != "external_directory" else true end)))
+                          + [{"action":"external_directory","resource":"*","effect":"ask"}])' \
+      "$CONF" > "$TMP"; then
+    if mv "$TMP" "$CONF"; then
+      echo "[entrypoint] external_directory normalized to \"ask\" (v2 permissions array; cross-directory flows need it)"
+    else
+      rm -f "$TMP"
+      echo "[entrypoint] WARNING: could not replace $CONF — will retry next start" >&2
+    fi
+  else
+    rm -f "$TMP"
+    echo "[entrypoint] WARNING: could not normalize $CONF — will retry next start" >&2
+  fi
+}
+
 case "$AGENT_PACK_VAL" in
   agents-opencode|agents-opencode@*)
     # Resolve the wanted version: bare / @latest → npm latest; else exact x.y.z.
@@ -160,20 +197,6 @@ case "$AGENT_PACK_VAL" in
         elif "$PACK_NPM_DIR/node_modules/.bin/agents-opencode" --global; then
           printf '%s\n' "$AO_VER" > "$PACK_MARKER"
           echo "[entrypoint] agents-opencode pack installed (all languages, $AO_VER — $AO_SOURCE)"
-          # The pack defaults permission.external_directory to "deny", which
-          # blocks this box's documented flows (new-project clones and
-          # `kimaki project add` write outside the session's project dir).
-          # Restore OpenCode's default ("ask") — in Discord, asks surface as
-          # approve buttons in the thread. doom_loop stays "deny" (a feature).
-          if command -v jq >/dev/null 2>&1 && [ -f "$CONF" ]; then
-            TMP="$(mktemp "$CONF_DIR/.opencode.json.XXXXXX")"
-            if jq '.permission.external_directory = "ask"' "$CONF" > "$TMP"; then
-              mv "$TMP" "$CONF"
-              echo "[entrypoint] permission.external_directory set to \"ask\" (cross-directory flows need it)"
-            else
-              rm -f "$TMP"
-            fi
-          fi
         else
           echo "[entrypoint] WARNING: agents-opencode install failed — will retry next start" >&2
         fi
@@ -248,6 +271,11 @@ case "${PONYTAIL:-1}" in
     fi
     ;;
 esac
+
+# Converge permissions after the pack and ponytail steps (either may create
+# the config first) and before kimaki starts the OpenCode service (config is
+# read at service start).
+normalize_external_directory
 
 # ── Git identity + optional SSH commit signing ─────────────────────────────
 # A default identity is baked as system gitconfig ("sha2lato agent"); override

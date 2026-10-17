@@ -16,6 +16,7 @@ docker compose -f compose/docker-compose.yml exec agent kimaki status
 | Agent container **restart-loops**; logs show `install_url` / gateway events | `KIMAKI_BOT_TOKEN` missing or malformed in `secrets/.env.agent` — the box fell back to Kimaki's shared-bot onboarding. Set the token → `up -d` |
 | Bot **online but silent** in channels | Message Content Intent disabled in the Developer Portal, or the channel doesn't belong to this machine. Check [discord-bot.md](discord-bot.md) + Kimaki's `no-kimaki`/role rules |
 | No `Kimaki <machine>` category after inviting the bot | Onboarding retries on next start: `docker compose -f compose/docker-compose.yml restart agent` |
+| Cross-directory flows (cloning a new project, `kimaki project add`) **blocked with no approve prompt** | The global `external_directory` rule is not `"ask"` — a restart re-normalizes it: `docker compose -f compose/docker-compose.yml restart agent`. Inspect with `… exec agent jq '.permissions' /data/opencode/config/opencode/opencode.json` |
 | Sessions stop responding | `docker compose -f compose/docker-compose.yml exec agent opencode service restart` — Kimaki reconnects by itself |
 | Need to restart just the bot | `docker compose -f compose/docker-compose.yml exec agent kimaki restart` (sessions keep running) |
 | Where are the logs? | `… exec agent kimaki logs` → path (`/data/kimaki.log`); follow with `--follow`. The file resets on every bot start |
