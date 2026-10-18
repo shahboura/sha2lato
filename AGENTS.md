@@ -215,3 +215,13 @@ Commits may be SSH-signed (git ≥ 2.34: `gpg.format ssh` + `user.signingkey` +
   the symlink is retired (Dockerfile + entrypoint). Residual: the
   "install is at the active path" info lines print once per pack version
   bump — upstream should downgrade them to info-level.
+- **2026-10-18 (session 4, follow-up: dind noise triage):** dind log noise
+  classified: `containerd binary not found → embedded containerd`,
+  `experimental embedded-containerd mode`, fsverity and nft lines are
+  expected upstream (`docker:29-dind` ships no containerd binary). The
+  intermittent `healthcheck failed … only one connection allowed` is the
+  embedded containerd's single-client gRPC quirk when `docker info` queries
+  it — the dind healthcheck now uses `docker version` (hits `/version` only)
+  and troubleshooting.md documents the whole set. docker:29-dind stays
+  (pinning 28-dind was the alternative; rejected: keep the sidecar current,
+  the noise is upstream-experimental and harmless).
