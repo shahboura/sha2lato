@@ -40,6 +40,9 @@ docker compose -f compose/docker-compose.yml exec agent kimaki status
 | Builds suddenly fail with TLS/cert errors | Same as above — the shared certs volume got corrupted; recreate it |
 | `ECONNREFUSED` connecting to a compose service from the agent | The port is published to `127.0.0.1` inside DinD (bound in the sidecar's netns). Publish to `0.0.0.0` (`"5432:5432"`) and connect to `docker:<port>` — see [usage.md](usage.md) → Docker-based projects |
 | Sidecar eats disk | Prune inside it: `docker compose -f compose/docker-compose.yml exec dind docker image prune -af` (DinD has its own image store) |
+| dind logs `containerd binary not found, starting embedded containerd` and `Running with experimental embedded-containerd mode` | Expected on `docker:29-dind`: the image intentionally ships no separate `containerd` binary, so dockerd runs its embedded containerd in experimental mode. Benign |
+| dind logs `failed check for fsverity support` / `Failed to find nft tool` | Benign upstream startup checks — the host filesystem has no fsverity, and the image has no `nft` binary (dockerd's firewall falls back). No action |
+| dind logs `healthcheck failed … Unavailable … only one connection allowed` | Embedded-containerd's single-client quirk: `docker info` queries containerd and can transiently collide under load. The compose healthcheck uses `docker version` (no containerd query), so container health no longer flaps on it. Build-time `calling snapshotter.Remove is forbidden` / content-store lock warnings are the same experimental-mode noise from BuildKit — harmless, builds complete |
 | QEMU/multi-arch builds hang | arm64 via QEMU is slow — expected. Prefer fewer platforms or a native arm64 host |
 
 ## Deploys (CI → host)
