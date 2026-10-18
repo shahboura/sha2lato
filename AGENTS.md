@@ -43,8 +43,9 @@ weekly CVE-fresh rebuilds. Public repo (MIT), fork-friendly.
 
 Complete and review-gated (4 adversarial cycles incl. a dedicated security
 pass, plus parallel-agent validation; all findings resolved): agent image
-(kimaki + opencode 2 + ui-ux-pro-max substrate, plus ponytail and graphify)
-built down to ~1.6 GB,
+(kimaki + OpenCode 2 + ui-ux-pro-max substrate, plus ponytail, graphify and
+the box-tool set — critique, tuistory, bun, playwright CLI + chromium deps,
+gh) at ≈2.2 GB of content,
 compose stack (agent + DinD, explicit volume names), secrets + age overlay,
 GitHub + Forgejo CI (multi-arch, weekly rebuild, fork-safe), host
 bootstrap/update/configure scripts, 11 scoped docs. `AGENT_PACK` uses a
@@ -175,3 +176,25 @@ Commits may be SSH-signed (git ≥ 2.34: `gpg.format ssh` + `user.signingkey` +
   runtime self-update. Open: deployment shows a persistent `docker`-hostname
   DNS failure from the agent container (suspect the deployed compose predates
   the dind `docker` alias) + the permission fix needs redeploy there.
+- **2026-10-18 (session 4):** Evaluated the forwarded box findings (kimaki.dev
+  tunnel DNS, DinD localhost ports, libstdc++ vs native prebuilds, pack skill
+  permissions, missing tuistory, tunnel CLI UX, external_directory prompt
+  noise) and audited all kimaki docs (features/guides/remote-access) for
+  feature-dependency gaps (diff viewer → critique, worktree auto-install →
+  pnpm/bun/yarn, visual verification → a browser tool, CI/automation → gh).
+  Shipped batch: entrypoint external-dir allow-list (`/tmp/opencode`,
+  `/data/reports`, `/data/transcripts`, `/data/attachments`); base →
+  `node:24-trixie-slim` (GLIBCXX 3.4.33 — fixes the critique/tree-sitter
+  prebuild failure class); new baked tools: critique 0.4.0, tuistory 0.12.0,
+  bun 1.4.3, playwright 1.64.1 (CLI + chromium system deps; browser binaries
+  stay in the volume cache), gh 2.102.0 (official apt repo), corepack shims;
+  ponytail default 5.3.2; graphifyy 0.9.92; docs + troubleshooting refreshed
+  (DinD ports, upload-to-discord ≤1.1.0 known issue, IPv6, version update
+  lanes) and lint-sim's header gains the daemon-side-DinD tar variant.
+  Validated: jq harness 7/7; image build + tool smokes green (image now bakes
+  kimaki 1.2.0); lint-sim ALL CLEAN; tokenless e2e sandbox ALL PASS
+  (isolation, convergence, permissions config, tool set, DinD path, clean
+  teardown); review gate (adversarial + security, parallel) — 0 blockers, all
+  findings applied. Open: commit; after deploy, retest upload-to-discord on
+  kimaki 1.2.0 and file the drafted kimaki issues (tunnel DNS + upload bug);
+  multi-arch CI covers the arm64 leg.

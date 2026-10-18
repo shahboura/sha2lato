@@ -44,6 +44,8 @@ Everything else in the repo is impersonal — fork-safe by design ([secrets.md](
 | `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GEMINI_API_KEY` | empty | optional model keys; `/login` in Discord is the recommended path |
 | `SHA2LATO_AGENT_IMAGE` | `sha2lato-agent:local` | selects the [deployment mode](#deployment-modes): local tag = build on host, any registry ref = pull |
 
+**Voice & TTS:** voice messages and `kimaki tts` need an OpenAI or Gemini key on this self-hosted setup — set `OPENAI_API_KEY` or `GEMINI_API_KEY` in `secrets/.env.agent` (above), or use `/transcription-key` in Discord (saved in `kimaki.db` on the volume).
+
 Rarely-needed knobs:
 
 | Variable | Where | What |
@@ -75,12 +77,12 @@ The image lives in `agent/` and is parameterized for reproducible builds:
 docker build \
   --build-arg KIMAKI_VERSION=1.0.0 \
   --build-arg UIPRO_VERSION=2.15.0 \
-  --build-arg GRAPHIFY_VERSION=0.9.90 \
+  --build-arg GRAPHIFY_VERSION=0.9.92 \
   --build-arg GRAPHIFY_EXTRAS=leiden,mcp \
   -t my-agent agent/
 ```
 
-Defaults: `KIMAKI_VERSION=latest`, `UIPRO_VERSION=latest` (the weekly rebuild refreshes them), `GRAPHIFY_VERSION=0.9.90`. `GRAPHIFY_EXTRAS` is empty by default (core graphify only — add `leiden` for community detection, `mcp` for the MCP server). Workflow packs are **not** build args — they're runtime config (`AGENT_PACK`), so changing pack or version never needs a rebuild.
+Defaults: `KIMAKI_VERSION=latest`, `UIPRO_VERSION=latest` (the weekly rebuild refreshes them), `GRAPHIFY_VERSION=0.9.92`; the tool args `CRITIQUE_VERSION`, `TUISTORY_VERSION`, `BUN_VERSION`, `PLAYWRIGHT_VERSION` also default to `latest` (the freshness lane — each rebuild re-resolves them; set an exact version for reproducible builds), while `GRAPHIFY_VERSION` is a deliberate pin: graphify feeds the baked usage guide and its venv extras, so majors are bumped by hand, not pulled in by a rebuild. `GRAPHIFY_EXTRAS` is empty by default (core graphify only — add `leiden` for community detection, `mcp` for the MCP server). Workflow packs are **not** build args — they're runtime config (`AGENT_PACK`), so changing pack or version never needs a rebuild.
 
 ## How changes apply
 
@@ -94,6 +96,6 @@ State — projects, sessions, model logins — always lives in the `sha2lato-age
 
 ## Pack-managed defaults
 
-The fetched `agents-opencode` pack ships a blanket `external_directory: "deny"` rule, which would block this box's cross-directory flows (new-project clones, `kimaki project add`). So the entrypoint **normalizes the global `external_directory` rule to `"ask"` on every start, whatever `AGENT_PACK` is set to**: it drops the legacy v1 `external_directory` entry — and the deprecated `permission` object itself once that was its only key — removes any `external_directory` entries from the v2 `permissions` array, and appends the canonical rule last — `{"action": "external_directory", "resource": "*", "effect": "ask"}` (OpenCode evaluates rules in order; the last match wins). Other rules (v2 array entries, unrelated v1 keys) are left untouched. The global `external_directory` namespace is **box-owned**: entries you add there — including denies like `~/.ssh/*`, in either format — are removed on every start; rules that must survive belong under `agents.<id>.permissions` (agent rules are evaluated after global rules). In Discord, permission asks appear as approve buttons in the thread; **Accept Always** saves a project-scoped allow rule, and agent-level permissions are the per-agent override lever. Everything else in the volume-resident `opencode.json` (plugins, other rules) is left untouched — only the global `external_directory` rule is re-normalized each start.
+The fetched `agents-opencode` pack ships a blanket `external_directory: "deny"` rule, which would block this box's cross-directory flows (new-project clones, `kimaki project add`). So the entrypoint **normalizes the global `external_directory` rule to `"ask"` on every start, whatever `AGENT_PACK` is set to**: it drops the legacy v1 `external_directory` entry — and the deprecated `permission` object itself once that was its only key — removes any `external_directory` entries from the v2 `permissions` array, and appends the canonical rules last — `{"action": "external_directory", "resource": "*", "effect": "ask"}` plus allows for the everyday working dirs `/tmp/opencode/*` (scratch), `/data/reports/*`, `/data/transcripts/*` and `/data/attachments/*` (OpenCode evaluates rules in order; the last match wins — the four allows follow the ask, so routine cross-session work needs no button while everything else still asks). Other rules (v2 array entries, unrelated v1 keys) are left untouched. The global `external_directory` namespace is **box-owned**: entries you add there — including denies like `~/.ssh/*`, in either format — are removed on every start; rules that must survive belong under `agents.<id>.permissions` (agent rules are evaluated after global rules). In Discord, permission asks appear as approve buttons in the thread; **Accept Always** saves a project-scoped allow rule, and agent-level permissions are the per-agent override lever. Everything else in the volume-resident `opencode.json` (plugins, other rules) is left untouched — only the global `external_directory` rule is re-normalized each start.
 
 `PONYTAIL=1` also merges the pinned ponytail plugin spec into that same `opencode.json` (`plugins` array) — it layers on top of any workflow pack; `PONYTAIL=0` strips it again. `GRAPHIFY=0` removes the graphify usage guide from the volume's skills directory (the CLI itself stays available).

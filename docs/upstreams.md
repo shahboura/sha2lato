@@ -7,7 +7,7 @@ Every versioned component this box pulls from upstream — what it is, where its
 | Lane | Covers | What you do |
 |---|---|---|
 | **Automatic** | CI actions + pinned Docker images | merge Renovate PRs (Mondays) |
-| **Scheduled** | Floating build-time deps: base image, apt, kimaki, ui-ux-pro-max, OpenCode, Docker CLI | nothing on CI-deployed hosts — the weekly rebuild republishes `:latest` **and deploys it** (GitHub `rebuild.yml`; Forgejo: cron in `.forgejo/workflows/ci.yml`). No CI deploy: `./deploy/update.sh` (Arcane: **Redeploy**) |
+| **Scheduled** | Floating build-time deps: base image, apt, kimaki, ui-ux-pro-max, critique, tuistory, bun, playwright, gh, OpenCode, Docker CLI | nothing on CI-deployed hosts — the weekly rebuild republishes `:latest` **and deploys it** (GitHub `rebuild.yml`; Forgejo: cron in `.forgejo/workflows/ci.yml`). No CI deploy: `./deploy/update.sh` (Arcane: **Redeploy**) |
 | **Manual** | Deliberate pins: graphify CLI, ponytail default, linter + Forgejo job-image digests | bump the pin — workflow pins are commit-only; image pins also need a rebuild/redeploy |
 | **Runtime** | Workflow packs + ponytail plugin — no rebuild at all | edit `AGENT_PACK` / `PONYTAIL_SPEC` in `secrets/.env.agent` (or the Arcane `.env` editor) + `up -d` to recreate — env files are re-read on recreate, not on a plain restart (Arcane: **Redeploy**) |
 
@@ -15,9 +15,14 @@ Every versioned component this box pulls from upstream — what it is, where its
 
 | Component | Upstream | License | Installed via | Version control | Updates how |
 |---|---|---|---|---|---|
-| Base image | [node:24-slim](https://github.com/nodejs/docker-node) (Docker Official) | MIT | `FROM` | floating tag | weekly rebuild; Renovate |
+| Base image | [node:24-trixie-slim](https://github.com/nodejs/docker-node) (Docker Official) | MIT | `FROM` | floating tag | weekly rebuild; Renovate |
 | kimaki | [remorses/kimaki](https://github.com/remorses/kimaki) | MIT | `npm -g` @latest | `KIMAKI_VERSION` build arg | weekly rebuild (arg can pin) |
 | ui-ux-pro-max CLI | [nextlevelbuilder/ui-ux-pro-max-skill](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill) | MIT | `npm -g` @latest | `UIPRO_VERSION` build arg | weekly rebuild (arg can pin) |
+| critique CLI | [remorses/critique](https://github.com/remorses/critique) | MIT | `npm -g` @latest | `CRITIQUE_VERSION` build arg | weekly rebuild (arg can pin) |
+| tuistory | [remorses/tuistory](https://github.com/remorses/tuistory) | MIT | `npm -g` @latest | `TUISTORY_VERSION` build arg | weekly rebuild (arg can pin) |
+| bun | [oven-sh/bun](https://github.com/oven-sh/bun) | MIT | `npm -g` (official npm dist) | `BUN_VERSION` build arg | weekly rebuild (arg can pin) |
+| playwright CLI | [microsoft/playwright](https://github.com/microsoft/playwright) | Apache-2.0 | `npm -g` @latest + `install-deps chromium` | `PLAYWRIGHT_VERSION` build arg | weekly rebuild; browser binaries stay in the volume cache (not the image) |
+| GitHub CLI (gh) | [cli/cli](https://github.com/cli/cli) | MIT | official apt repo | floating | weekly rebuild |
 | OpenCode 2 | [anomalyco/opencode](https://github.com/anomalyco/opencode) | MIT | official install script | unpinned (kimaki requires ≥ 2.0.19) | weekly rebuild |
 | graphify CLI | [Graphify-Labs/graphify](https://github.com/Graphify-Labs/graphify) | Apache-2.0 | pip `graphifyy==…` into its own venv | `GRAPHIFY_VERSION` (+ `GRAPHIFY_EXTRAS`) | **manual bump** + rebuild |
 | Docker CLI trio (cli, buildx, compose) | [Docker's official apt repo](https://download.docker.com/linux/debian) | Apache-2.0 | apt | floating | weekly rebuild |
@@ -33,7 +38,7 @@ Build-arg mechanics: [configuration.md → Build-time](configuration.md#build-ti
 |---|---|---|---|---|---|
 | agents-opencode pack | [shahboura/agents-opencode](https://github.com/shahboura/agents-opencode) | MIT | npm fetch at container start → `/data/opencode/npm` | `AGENT_PACK=agents-opencode` (bare = npm latest per start) | leave bare, or pin `agents-opencode@x.y.z` |
 | Superpowers | [obra/superpowers](https://github.com/obra/superpowers) | MIT | git plugin spec in `opencode.json` | `AGENT_PACK=superpowers` (bare = latest tag per start; needs ≥ v6.4.1 on OpenCode v2) | leave bare, or pin `superpowers@vX.Y.Z` |
-| Ponytail | [DietrichGebert/ponytail](https://github.com/DietrichGebert/ponytail) | MIT | OpenCode plugin spec | `PONYTAIL_SPEC` (default `@dietrichgebert/ponytail@5.2.0`) | set `PONYTAIL_SPEC`, or bump the entrypoint default + rebuild |
+| Ponytail | [DietrichGebert/ponytail](https://github.com/DietrichGebert/ponytail) | MIT | OpenCode plugin spec | `PONYTAIL_SPEC` (default `@dietrichgebert/ponytail@5.3.2`) | set `PONYTAIL_SPEC`, or bump the entrypoint default + rebuild |
 
 Grammar and behavior: [usage.md → Workflow pack + extras](usage.md#workflow-pack--extras).
 
@@ -65,4 +70,4 @@ Grammar and behavior: [usage.md → Workflow pack + extras](usage.md#workflow-pa
 
 ## Last verified build
 
-2026-10-16, `sha2lato-agent:local` (linux/amd64): kimaki 1.1.0 · ui-ux-pro-max-cli 2.15.0 · OpenCode v2.0.30 · python 3.11.2 · docker CLI 29.9.1 · git 2.39.5 — full stack exercised end-to-end (compose → DinD → Discord gateway).
+2026-10-18, `sha2lato-agent:e2e` (linux/amd64, working tree of this batch): kimaki 1.2.0 · ui-ux-pro-max-cli 2.15.0 · critique 0.4.0 · tuistory 0.12.0 · bun 1.4.3 · playwright 1.64.1 · gh 2.102.0 · graphify 0.9.92 · OpenCode v2.0.32 · python 3.13.5 · docker CLI 29.9.1 · git 2.47.3 — full stack exercised end-to-end in a tokenless sandbox (compose → DinD → entrypoint convergence, tool set, permissions config); the Discord gateway leg runs on deploy of this image. Size ≈ 2.2 GB of content (`du`); `docker images` reports ~3.0 GB (daemon accounting — uncompressed layers/allocations, not extra content).

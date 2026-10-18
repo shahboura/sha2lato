@@ -36,12 +36,19 @@ Requirements: SSH access to the git host (see [secrets.md](secrets.md)); git pre
 - **Ask a side question without derailing** — end with `. btw` (or `/btw`): forks the context into a new thread while the main run continues.
 - **Worktrees — isolated experiments** — `/new-worktree <name>` starts a session in a fresh git worktree (never touching your main checkout); `/merge-worktree` merges it back (rebase or squash). Make it automatic per channel with `kimaki channel worktrees on` (or `KIMAKI_WORKTREES=1` for all sessions).
 - **Review diffs on your phone** — `/diff` posts a shareable web diff URL of the session's changes.
-- **Tunnels — see your dev server from your phone** — ask the agent to run `kimaki tunnel -- <dev command>` (or `-p <port>`); it prints a public URL you can open anywhere.
+- **Tunnels — see your dev server from your phone** — ask the agent to run `kimaki tunnel -- <dev command>` (or `-p <port>`); it prints a public URL you can open anywhere. Keep a tunnel alive in a named background session and read its output later via `tuistory` — e.g. `tuistory launch "kimaki tunnel -- pnpm dev" -s myapp-dev`, then `tuistory read -s myapp-dev` to grab the URL.
 - **Voice** — record a voice note (transcribed with your file tree for accuracy); or join the **Kimaki voice** channel and talk. `kimaki --voice <name>` once to change the voice.
 - **Images & files** — attach screenshots/files to messages; the agent can also upload files back into the thread.
 - **Shell commands** — prefix a message with `!` to run it raw in the project folder (e.g. `! git status`).
 - **Routines — scheduled prompts** — ask for a cron-style routine (e.g. “every weekday at 8:00, summarize open PRs in this channel”) — great for morning digests from your phone.
 - **Sessions sleep & wake** — long-idle sessions are cheap; resume whenever.
+
+## Feature support (baked tools)
+
+- `/diff` — works via the baked `critique` diff-viewer backend.
+- `kimaki tunnel` — dev servers; keep them alive in named background sessions via `tuistory` (see Tunnels above).
+- Headless screenshots — via the `playwright` CLI; run `playwright install chromium` once per browser version — the binaries land in the `/data` volume cache (survive rebuilds).
+- Also available: `bun`, `gh` (GitHub CLI), and `pnpm`/`yarn` via `corepack`.
 
 ## Access control
 
@@ -54,6 +61,18 @@ The agent has full `docker` (and `buildx`, `compose`) against the **DinD sidecar
 ```bash
 docker compose -f compose/docker-compose.yml exec dind docker image prune -af
 ```
+
+**Ports & service URLs (DinD).** Services published to `127.0.0.1` inside a project's compose bind in the **sidecar's own network namespace** — unreachable from the agent. Publish to `0.0.0.0` and connect via `docker:<port>`:
+
+```yaml
+# docker-compose.override.yml (in the project)
+services:
+  postgres:
+    ports:
+      - "5432:5432"        # NOT "127.0.0.1:5432:5432"
+```
+
+Then `DATABASE_URL=postgres://user:pass@docker:5432/db`.
 
 ## Workflow pack + extras
 
@@ -90,11 +109,11 @@ Then `docker compose -f compose/docker-compose.yml up -d`. Switching any of them
 **Details:**
 
 - `agents-opencode` is fetched from npm on first start into `/data/opencode/npm` (on the volume — offline starts keep working afterwards) and installed into the global OpenCode config, all languages. Bare = npm latest, re-resolved every start; `agents-opencode@x.y.z` pins exactly. Verify in Discord: ask *“@orchestrator plan this”* or look for the slash commands.
-- **Cross-directory access:** on every start, the entrypoint normalizes the global `external_directory` rule to `"ask"` in OpenCode v2's `permissions` array — the fetched agents-opencode pack ships a blanket `"deny"` that would silently block documented flows that write outside the session's project directory (cloning new projects, `kimaki project add`). In Discord, permission asks appear as **approve buttons in the thread**: **Accept Always** saves a project-scoped allow rule, and agent-level permissions are the per-agent override lever.
+- **Cross-directory access:** on every start, the entrypoint normalizes the global `external_directory` rule to `"ask"` in OpenCode v2's `permissions` array — the fetched agents-opencode pack ships a blanket `"deny"` that would silently block documented flows that write outside the session's project directory (cloning new projects, `kimaki project add`). The four everyday dirs (`/tmp/opencode` scratch, `/data/reports`, `/data/transcripts`, `/data/attachments`) are additionally **allow-listed on every start**, so routine cross-session work needs no button; everything else still asks. In Discord, permission asks appear as **approve buttons in the thread**: **Accept Always** saves a project-scoped allow rule, and agent-level permissions are the per-agent override lever.
 - **Pack updates:** bare packs re-check for a newer version on every start; exact pins change only when you edit them. A version-tracked marker re-installs the pack files on the volume automatically.
 - `superpowers` is fetched from git by OpenCode; bare = latest tag re-resolved each start (offline keeps the current spec), `superpowers@v7.0.0` pins exactly (needs ≥ v6.4.1 on OpenCode v2). Its version-only telemetry ping is off unless you set `SUPERPOWERS_DISABLE_TELEMETRY=0`.
 - Switching packs removes the other pack's *plugin* entry automatically; to also remove `agents-opencode` files, run `docker compose -f compose/docker-compose.yml exec agent agents-opencode --global --uninstall` and change `AGENT_PACK` (otherwise it reinstalls on the next start).
-- `ponytail` is an OpenCode **plugin** (pinned `@dietrichgebert/ponytail@5.2.0`, overridable with `PONYTAIL_SPEC`); OpenCode fetches it on first start. It layers on top of any workflow pack. `PONYTAIL=0` strips it from the config.
+- `ponytail` is an OpenCode **plugin** (pinned `@dietrichgebert/ponytail@5.3.2`, overridable with `PONYTAIL_SPEC`); OpenCode fetches it on first start. It layers on top of any workflow pack. `PONYTAIL=0` strips it from the config.
 - `graphify` ships baked (pinned CLI in its own venv) with a short usage guide the agent loads when exploring large codebases: build with `graphify extract .` (add `--code-only` to stay fully offline), refresh with `graphify update .`, query with `graphify query` / `path` / `explain`. Graphs are per-checkout in `graphify-out/` (keep it out of git). `GRAPHIFY=0` removes only the guide — the CLI stays available.
 
 ## Commits from the agent
