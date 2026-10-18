@@ -198,3 +198,10 @@ Commits may be SSH-signed (git ≥ 2.34: `gpg.format ssh` + `user.signingkey` +
   findings applied. Open: commit; after deploy, retest upload-to-discord on
   kimaki 1.2.0 and file the drafted kimaki issues (tunnel DNS + upload bug);
   multi-arch CI covers the arm64 leg.
+- **2026-10-18 (session 4, follow-up):** the arm64 CI leg failed after merge:
+  critique's `tree-sitter-javascript` has no linux-arm64 prebuild, so npm
+  falls back to node-gyp and died on `make` not found. Fix: bake
+  `build-essential` (gcc/g++/make) — covers every native source-build
+  fallback and also lets agents compile node-gyp deps at runtime (+~0.2 GB).
+  To be validated by a local linux/arm64 buildx build under QEMU (build
+  completes + `critique --version` runs); amd64 unaffected.
