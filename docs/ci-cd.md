@@ -82,7 +82,7 @@ Component-by-component map — upstream repo, license, pin location, update lane
 | kimaki / ui-ux-pro-max-cli / critique / tuistory / bun / playwright (npm) | Installed `@latest` at build time — the weekly rebuild refreshes them. Build args can pin versions for reproducible builds instead |
 | agents-opencode pack (npm) | Runtime-fetched by the entrypoint, not baked: bare `AGENT_PACK=agents-opencode` tracks npm latest on every container start; pin `agents-opencode@x.y.z` to lock the version (fetched with lifecycle scripts disabled). Cached on the volume; offline starts use the cached copy — the log warns if it differs from a freshly pinned version |
 | superpowers plugin (git) | Runtime-fetched by OpenCode from a git tag: bare = latest tag re-resolved each start; pin `superpowers@v7.0.0` for exactness |
-| graphify CLI (pip `graphifyy`) | Pinned via `GRAPHIFY_VERSION` (manual bump); optional backends via `GRAPHIFY_EXTRAS` (empty = core only). Installed into its own venv at build time |
+| graphify CLI (pip `graphifyy`) | Pinned via `GRAPHIFY_VERSION` (manual bump); optional backends via `GRAPHIFY_EXTRAS` (default `openai` for the DeepSeek/OpenAI semantic pass; empty = core only). Installed into its own venv at build time |
 | ponytail plugin (npm) | Pinned in the entrypoint (`PONYTAIL_SPEC`, default `@dietrichgebert/ponytail@5.3.2`); OpenCode fetches it on first start — bump the spec to update |
 | OpenCode | Installed from the official v2 install script at build time (Kimaki requires ≥ 2.0.19; it never pins) |
 | CI actions (`actions/*`, `docker/*`) | Renovate PRs (pinned to digests) |

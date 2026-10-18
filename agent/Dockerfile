@@ -32,8 +32,9 @@ ARG TUISTORY_VERSION=latest
 ARG BUN_VERSION=latest
 ARG PLAYWRIGHT_VERSION=latest
 ARG GRAPHIFY_VERSION=0.9.92
-# Optional graphify backends, comma-separated (e.g. "leiden,mcp"); empty = core only
-ARG GRAPHIFY_EXTRAS=
+# graphify extras, comma-separated (e.g. "leiden,mcp"). Default openai powers the
+# semantic LLM pass with DEEPSEEK_API_KEY/OPENAI_API_KEY; empty = core only.
+ARG GRAPHIFY_EXTRAS=openai
 
 # bash with pipefail for every RUN env (predictable failures on pipes)
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
