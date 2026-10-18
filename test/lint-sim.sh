@@ -13,6 +13,14 @@
 #   docker run --rm -v "$PWD:/workspace" -w /workspace \
 #     -v //var/run/docker.sock:/var/run/docker.sock --entrypoint bash \
 #     "${JOB_IMAGE:-node:24-bookworm}" /workspace/test/lint-sim.sh
+#
+# Daemon-side Docker (DOCKER_HOST to a DinD sidecar, e.g. the agent box):
+# "-v $PWD" resolves on the DAEMON's filesystem — the mount comes up empty.
+# Pipe the repo in instead (same job image + socket pattern):
+#   tar -czf - --exclude=./secrets --exclude=./data --exclude=./tmp -C "$PWD" . | docker run --rm -i \
+#     -v //var/run/docker.sock:/var/run/docker.sock --entrypoint bash \
+#     "${JOB_IMAGE:-node:24-bookworm}" \
+#     -c 'mkdir -p /workspace && tar -xzf - -C /workspace && cd /workspace && bash test/lint-sim.sh'
 set -e
 
 echo "--- job image: $(cat /etc/os-release 2>/dev/null | head -1) ---"

@@ -114,17 +114,25 @@ sp_tag_ok() {
   git check-ref-format "refs/tags/$1" >/dev/null 2>&1
 }
 
-# Normalize cross-directory access to "ask" — OpenCode v2 evaluates permission
-# rules in order (last match wins) and its canonical shape is the `permissions`
-# array (`permission` is the deprecated v1 key). The fetched agents-opencode
-# pack ships a blanket external_directory "deny": that would silently block
-# this box's documented flows (new-project clones and `kimaki project add`
-# write outside the session's project dir), while "ask" surfaces kimaki's
-# Accept / Accept Always / Deny buttons in Discord. Runs on every start
-# (idempotent): drop the legacy v1 external_directory entry (and the deprecated
-# `permission` object itself, once nothing else is left in it), drop any
-# external_directory rules from the v2 array, and append the canonical ask rule
-# LAST. Other rules — v2 array entries and unrelated v1 keys — are left
+# Normalize cross-directory access — OpenCode v2 evaluates permission rules in
+# order (last match wins) and its canonical shape is the `permissions` array
+# (`permission` is the deprecated v1 key). The fetched agents-opencode pack
+# ships a blanket external_directory "deny": that would silently block this
+# box's documented flows (new-project clones and `kimaki project add` write
+# outside the session's project dir), while "ask" surfaces kimaki's Accept /
+# Accept Always / Deny buttons in Discord. On top of the global "ask", allow
+# the working dirs agents touch every day: the /tmp/opencode scratch dir the
+# harness points them at, plus /data/reports, /data/transcripts and
+# /data/attachments (agent-written reports, kimaki session transcripts, user
+# uploads). Sensitive paths stay gated by the ask: /data/opencode (provider
+# auth), /data/kimaki.db (bot token), /data/session-events, /root, the bare
+# /data parent. Shell gets no extra rules here, but its scanner-inferred
+# external dirs are checked against this same list — the four allows cover
+# those dirs for shell too. Runs on
+# every start (idempotent): drop the legacy v1 external_directory entry (and
+# the deprecated `permission` object itself, once nothing else is left in it),
+# drop any external_directory rules from the v2 array, and append the canonical
+# rules LAST. Other rules — v2 array entries and unrelated v1 keys — are left
 # untouched. Per-agent permissions and "Accept Always" saved approvals remain
 # the override levers.
 normalize_external_directory() {
@@ -137,10 +145,14 @@ normalize_external_directory() {
   if jq 'if (.permission | type) == "object" then del(.permission.external_directory) else . end
         | if (.permission | type) == "object" then (if (.permission | length) == 0 then del(.permission) else . end) else . end
         | .permissions = (((.permissions // []) | map(select(if type == "object" then .action != "external_directory" else true end)))
-                          + [{"action":"external_directory","resource":"*","effect":"ask"}])' \
+                          + [{"action":"external_directory","resource":"*","effect":"ask"},
+                             {"action":"external_directory","resource":"/tmp/opencode/*","effect":"allow"},
+                             {"action":"external_directory","resource":"/data/reports/*","effect":"allow"},
+                             {"action":"external_directory","resource":"/data/transcripts/*","effect":"allow"},
+                             {"action":"external_directory","resource":"/data/attachments/*","effect":"allow"}])' \
       "$CONF" > "$TMP"; then
     if mv "$TMP" "$CONF"; then
-      echo "[entrypoint] external_directory normalized to \"ask\" (v2 permissions array; cross-directory flows need it)"
+      echo "[entrypoint] external_directory normalized (ask + allow-list for scratch/reports/transcripts/attachments)"
     else
       rm -f "$TMP"
       echo "[entrypoint] WARNING: could not replace $CONF — will retry next start" >&2
@@ -259,7 +271,7 @@ esac
 # ── Ponytail discipline plugin (PONYTAIL, default on) ──────────────────────
 # Injects the minimal-code ruleset every turn plus /ponytail commands.
 # Set PONYTAIL=0/off/false to strip it from the config.
-PONYTAIL_SPEC="${PONYTAIL_SPEC:-@dietrichgebert/ponytail@5.2.0}"
+PONYTAIL_SPEC="${PONYTAIL_SPEC:-@dietrichgebert/ponytail@5.3.2}"
 case "${PONYTAIL:-1}" in
   0|off|false)
     remove_plugin_specs "@dietrichgebert/ponytail@"

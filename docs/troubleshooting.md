@@ -16,7 +16,7 @@ docker compose -f compose/docker-compose.yml exec agent kimaki status
 | Agent container **restart-loops**; logs show `install_url` / gateway events | `KIMAKI_BOT_TOKEN` missing or malformed in `secrets/.env.agent` — the box fell back to Kimaki's shared-bot onboarding. Set the token → `up -d` |
 | Bot **online but silent** in channels | Message Content Intent disabled in the Developer Portal, or the channel doesn't belong to this machine. Check [discord-bot.md](discord-bot.md) + Kimaki's `no-kimaki`/role rules |
 | No `Kimaki <machine>` category after inviting the bot | Onboarding retries on next start: `docker compose -f compose/docker-compose.yml restart agent` |
-| Cross-directory flows (cloning a new project, `kimaki project add`) **blocked with no approve prompt** | The global `external_directory` rule is not `"ask"` — a restart re-normalizes it: `docker compose -f compose/docker-compose.yml restart agent`. Inspect with `… exec agent jq '.permissions' /data/opencode/config/opencode/opencode.json` |
+| Cross-directory flows (cloning a new project, `kimaki project add`) **blocked with no approve prompt** | The global `external_directory` rule is not `"ask"` — a restart re-normalizes it: `docker compose -f compose/docker-compose.yml restart agent`. The entrypoint also allow-lists the everyday dirs on every start — `/tmp/opencode` (scratch), `/data/reports`, `/data/transcripts`, `/data/attachments`; everything else asks. Inspect with `… exec agent jq '.permissions' /data/opencode/config/opencode/opencode.json` |
 | Sessions stop responding | `docker compose -f compose/docker-compose.yml exec agent opencode service restart` — Kimaki reconnects by itself |
 | Need to restart just the bot | `docker compose -f compose/docker-compose.yml exec agent kimaki restart` (sessions keep running) |
 | Where are the logs? | `… exec agent kimaki logs` → path (`/data/kimaki.log`); follow with `--follow`. The file resets on every bot start |
@@ -27,6 +27,10 @@ docker compose -f compose/docker-compose.yml exec agent kimaki status
 | Bot online but auth/model errors, token looks correct | `secrets/.env.agent` may have Windows CRLF endings — values then carry a stray `\r`. Rewrite the file with LF endings (or re-run `./deploy/configure.sh`). |
 | Agent commits fail with *"please tell me who you are"* | Update to a current image (`./deploy/update.sh` — the default identity ships in images built with it), or set `GIT_USER_NAME`/`GIT_USER_EMAIL` in `secrets/.env.agent` and `up -d` |
 | `Permissions 0644 … too open` — SSH ignores the key | Fix on the host: `chmod 600 secrets/ssh/<key>` (the mount is read-only — the container cannot fix it) |
+| `kimaki upload-to-discord` posts an empty message / drops attachments | Known issue on kimaki <= 1.1.0; current images bake the latest kimaki — rebuild/redeploy (`./deploy/update.sh`) and retest. Workaround meanwhile: copy files out via a shell or another transport |
+| Kimaki is older than npm latest (`npm ls -g kimaki`) | Kimaki is baked at build time — rebuild/redeploy takes `KIMAKI_VERSION=latest`. Inside a live container `npm i -g kimaki@latest && kimaki restart` works but is lost on recreate |
+| `curl -6` / IPv6 connections fail from inside | Expected: the box has no IPv6 egress (IPv4-only container networking); dual-stack client issues cannot be reproduced from inside |
+| `opencode upgrade` seems to have no effect | The running service keeps the old binary — restart it: `docker compose -f compose/docker-compose.yml exec agent opencode service restart` (sessions survive; pending permission prompts are cancelled) |
 
 ## Docker-in-Docker (agent builds)
 
@@ -34,6 +38,7 @@ docker compose -f compose/docker-compose.yml exec agent kimaki status
 |---|---|
 | `Cannot connect to the Docker daemon` inside sessions | DinD sidecar down or certs stale: `docker compose -f compose/docker-compose.yml up -d dind` → re-run. If it persists, wipe the cert volume and recreate both: `down`, `docker volume rm sha2lato-dind-certs`, `up -d` (builds/images are in `sha2lato-dind-data`, unaffected) |
 | Builds suddenly fail with TLS/cert errors | Same as above — the shared certs volume got corrupted; recreate it |
+| `ECONNREFUSED` connecting to a compose service from the agent | The port is published to `127.0.0.1` inside DinD (bound in the sidecar's netns). Publish to `0.0.0.0` (`"5432:5432"`) and connect to `docker:<port>` — see [usage.md](usage.md) → Docker-based projects |
 | Sidecar eats disk | Prune inside it: `docker compose -f compose/docker-compose.yml exec dind docker image prune -af` (DinD has its own image store) |
 | QEMU/multi-arch builds hang | arm64 via QEMU is slow — expected. Prefer fewer platforms or a native arm64 host |
 

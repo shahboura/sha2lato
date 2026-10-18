@@ -2,7 +2,13 @@
 # sha2lato agent box — Kimaki + OpenCode 2 + ui-ux-pro-max, Docker-ready.
 #
 # Design notes:
-# - Base: node:24-slim (Debian) — the same base Kimaki's own Dockerfile uses.
+# - Base: node:24-trixie-slim (Debian 13). Kimaki's own Dockerfile stays on
+#   bookworm; trixie is chosen here for GCC 14's libstdc++ (GLIBCXX 3.4.33),
+#   which native prebuilds (critique/tree-sitter) require.
+# - Agent tools baked for kimaki features: critique (diff viewer), tuistory
+#   (background sessions), bun, playwright CLI + chromium system deps
+#   (headless screenshots — install browsers with `playwright install`; they
+#   persist in the /data volume cache via XDG_CACHE_HOME), GitHub CLI, corepack.
 # - The runtime substrate installs at build time; weekly CI rebuilds keep it
 #   fresh (CVEs). Workflow packs (AGENT_PACK) are NOT baked — the entrypoint
 #   fetches them at runtime (npm/git) into the volume, so pack versions are
@@ -15,13 +21,17 @@
 #   OpenCode global skills dir by entrypoint.sh on every start, so image
 #   rebuilds update the skill while user-added skills on the volume survive.
 
-FROM node:24-slim
+FROM node:24-trixie-slim
 
 ARG DEBIAN_FRONTEND=noninteractive
 # Pin for reproducible builds; "latest" by design (weekly rebuilds refresh)
 ARG KIMAKI_VERSION=latest
 ARG UIPRO_VERSION=latest
-ARG GRAPHIFY_VERSION=0.9.90
+ARG CRITIQUE_VERSION=latest
+ARG TUISTORY_VERSION=latest
+ARG BUN_VERSION=latest
+ARG PLAYWRIGHT_VERSION=latest
+ARG GRAPHIFY_VERSION=0.9.92
 # Optional graphify backends, comma-separated (e.g. "leiden,mcp"); empty = core only
 ARG GRAPHIFY_EXTRAS=
 
@@ -34,6 +44,8 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 # python3                            : ui-ux-pro-max search scripts (stdlib only)
 # docker-ce-cli + buildx + compose   : docker CLI for the DinD sidecar, so the
 #                                      agent can build AND run project images
+# gh                                 : GitHub CLI from its official apt repo —
+#                                      issue/PR workflows, gist evidence
 # apt versions intentionally unpinned — weekly image rebuilds track security fixes
 # hadolint ignore=DL3008
 RUN set -eux; \
@@ -48,16 +60,39 @@ RUN set -eux; \
     apt-get update; \
     apt-get install -y --no-install-recommends \
         docker-ce-cli docker-buildx-plugin docker-compose-plugin; \
+    curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg -o /etc/apt/keyrings/githubcli-archive-keyring.gpg; \
+    chmod a+r /etc/apt/keyrings/githubcli-archive-keyring.gpg; \
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" > /etc/apt/sources.list.d/github-cli.list; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends gh; \
     apt-get clean; \
     rm -rf /var/lib/apt/lists/*
 
-# ── Kimaki + ui-ux-pro-max CLI (runtime substrate) ─────────────────────────
+# ── Kimaki + agent tooling (runtime substrate) ─────────────────────────────
 # Workflow packs are fetched by the entrypoint at runtime, not baked here.
+# critique: diff-viewer backend for kimaki /diff (docs: "not bundled")
+# tuistory: named background sessions (the kimaki tunnel pattern)
+# bun:      bun-lockfile projects, bunx-based tools (profano, ...)
+# playwright: headless browser CLI for screenshots; browser binaries are NOT
+#   baked — run `playwright install chromium` once per revision and they land
+#   in the /data volume cache (XDG_CACHE_HOME below), surviving rebuilds and
+#   matching whatever version a project or the CLI needs.
 # The npm cache is purged in the SAME layer: Docker layers are additive, so a
 # later `rm` would not reclaim it — without this it adds ~680 MB to the image.
 RUN npm install -g kimaki@${KIMAKI_VERSION} ui-ux-pro-max-cli@${UIPRO_VERSION} \
+        critique@${CRITIQUE_VERSION} tuistory@${TUISTORY_VERSION} \
+        bun@${BUN_VERSION} playwright@${PLAYWRIGHT_VERSION} \
     && npm cache clean --force \
     && rm -rf /root/.npm
+
+# ── Chromium system deps + corepack shims ──────────────────────────────────
+# playwright install-deps pulls the X/GTK libraries Chromium needs (official
+# per-distro mapping — handles trixie's package renames); corepack provides
+# pnpm/yarn shims for worktree auto-install and repos that pin their manager.
+RUN corepack enable \
+    && playwright install-deps chromium \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
 # ── OpenCode 2 (kimaki requires >= 2.0.19) ─────────────────────────────────
 RUN curl -fsSL https://opencode.ai/v2/install | bash
@@ -106,7 +141,8 @@ RUN set -eux; \
            /opt/graphify/lib/python3.*/site-packages/pip-*.dist-info \
            /opt/graphify/bin/pip*; \
     ln -s /opt/graphify/bin/graphify /usr/local/bin/graphify; \
-    test -x /opt/graphify/bin/graphify
+    test -x /opt/graphify/bin/graphify; \
+    /opt/graphify/bin/graphify --help >/dev/null
 
 # ── Bake the graphify usage guide (synced to the volume by the entrypoint) ──
 COPY skills-graphify /opt/skills-graphify
