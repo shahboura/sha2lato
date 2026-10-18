@@ -32,6 +32,11 @@ weekly CVE-fresh rebuilds. Public repo (MIT), fork-friendly.
 - **Docs:** main `README.md` is marketing-flavored; `docs/*.md` are practical
   and scoped. Update the docs index when adding a doc. Diagrams use Mermaid
   (renders natively on GitHub and Forgejo).
+- **Knowledge graph:** when `graphify-out/graph.json` exists, use
+  `graphify query` / `path` / `explain` before broad grepping. After code
+  edits run `graphify update .` (free); after doc edits run
+  `graphify extract . --backend deepseek` and `graphify label .`. If the
+  graph is absent, skip it silently.
 - **Config UX:** convention over configuration — the only required value is
   the bot token; every knob has one override point (`secrets/.env.agent` via
   `deploy/configure.sh`); users never edit compose/Dockerfile.
