@@ -42,6 +42,9 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 # git, curl, unzip, ca-certificates  : required by kimaki / opencode
 # openssh-client                     : git over SSH (Forgejo/GitHub deploy keys)
 # python3                            : ui-ux-pro-max search scripts (stdlib only)
+# build-essential                    : node-gyp fallback builds — arm64 npm deps
+#                                      without prebuilds (critique's tree-sitter
+#                                      grammars) + native deps agents compile
 # docker-ce-cli + buildx + compose   : docker CLI for the DinD sidecar, so the
 #                                      agent can build AND run project images
 # gh                                 : GitHub CLI from its official apt repo —
@@ -51,6 +54,7 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN set -eux; \
     apt-get update; \
     apt-get install -y --no-install-recommends \
+        build-essential \
         ca-certificates curl git openssh-client unzip python3 python3-venv jq; \
     install -m 0755 -d /etc/apt/keyrings; \
     curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc; \
