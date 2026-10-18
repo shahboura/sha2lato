@@ -46,187 +46,44 @@ weekly CVE-fresh rebuilds. Public repo (MIT), fork-friendly.
 
 ## Current state
 
-Complete and review-gated (4 adversarial cycles incl. a dedicated security
-pass, plus parallel-agent validation; all findings resolved): agent image
-(kimaki + OpenCode 2 + ui-ux-pro-max substrate, plus ponytail, graphify and
-the box-tool set — critique, tuistory, bun, playwright CLI + chromium deps,
-gh) at ≈2.2 GB of content,
-compose stack (agent + DinD, explicit volume names), secrets + age overlay,
-GitHub + Forgejo CI (multi-arch, weekly rebuild, fork-safe), host
-bootstrap/update/configure scripts, 11 scoped docs. `AGENT_PACK` uses a
-`pack[@version]` grammar — `agents-opencode` (default; bare = npm latest,
-fetched at runtime to the volume) / `superpowers` (bare = latest git tag) /
-`none`, exact pins supported; `PONYTAIL=1` and
-`GRAPHIFY=1` extras are on by default and toggleable; agent commits use a
-baked identity (`sha2lato agent`) and can be SSH-signed via `GIT_SIGN=1`
-(`SHA2LATO_AGENT_IMAGE` selection → docs/configuration.md → Deployment
-modes). Pushed to GitHub (public): CI green, multi-arch image published to
-GHCR. Forgejo leg deferred.
-
-## Initial commit recipe (Windows authoring → Linux exec bits)
-
-```bash
-git add -A
-git add --chmod=+x agent/entrypoint.sh deploy/update.sh deploy/bootstrap-host.sh deploy/age.sh deploy/configure.sh
-git commit -m "Initial release"
-```
-
-The CI lint jobs fail loudly if a future commit drops an exec bit.
-Commits may be SSH-signed (git ≥ 2.34: `gpg.format ssh` + `user.signingkey` +
-`commit.gpgsign true`) — nothing in the repo depends on signatures either way.
+The box is complete and review-gated: agent image (Kimaki + OpenCode 2 +
+ui-ux-pro-max + ponytail + graphify + the box tools: critique, tuistory, bun,
+playwright CLI + chromium deps, gh), compose stack (agent + DinD, explicit
+volume names), secrets + age overlay, GitHub + Forgejo CI (multi-arch, weekly
+rebuild, fork-safe), host bootstrap/update/configure scripts, and scoped docs.
+`AGENT_PACK` uses `pack[@version]` — `agents-opencode` (default; runtime npm
+latest) / `superpowers` (latest git tag) / `none`; exact pins supported.
+`PONYTAIL=1` and `GRAPHIFY=1` default on; `GRAPHIFY_EXTRAS=openai` defaults on
+so graphify's semantic pass can use `DEEPSEEK_API_KEY`/`OPENAI_API_KEY`.
+Agent commits use a baked identity (`sha2lato agent`) and can be SSH-signed
+with `GIT_SIGN=1`. Public on GitHub; CI green; multi-arch image on GHCR.
+Forgejo CI is wired but the runner leg is deferred.
 
 ## Session log
 
-- **2026-10-14 (session 1):** Planned with owner and built everything end to
-  end: agent image (verified by real local builds + smoke tests), compose
-  stack (agent + DinD, smoke-tested healthy), secrets scaffolding + age
-  overlay, GitHub CI (reusable build/deploy, weekly rebuild, fork-safe
-  self-skip) and Forgejo CI (mirror, official-only job image, stdin linters —
-  validated by full local job simulations), host bootstrap + update +
-  configure scripts, 9 scoped docs (incl. configuration + multi-machine with
-  Mermaid diagrams), and the validation gate: 3 adversarial review cycles
-  (exec-bit guards, sudo-proof ufw, healthcheck env, permissions scoping,
-  pack XDG-path fix, pack `external_directory` restoration, version-tracked
-  pack marker — all fixed and re-verified). Workflow packs wired as a single
-  `AGENT_PACK` selector (owner's agents-opencode pack baked in / superpowers
-  plugin), mutually exclusive with enforced worktree rules. Awaiting owner's
-  first commit.
-- **2026-10-14 (session 1, continued):** Added workflow extras with defaults
-  on — ponytail (plugin spec) and graphify (baked CLI + usage guide) — made
-  `AGENT_PACK` default to agents-opencode (adds `none`), extended
-  `configure.sh`, and fixed a hidden 684 MB npm-cache bloat (image 2474 →
-  1645 MB, smaller than the pre-graphify baseline). arm64 wheels and the full
-  toggle matrix verified via parallel subagents. First commit made
-  (`7739ffb Initial release`); the extras batch is uncommitted.
-- **2026-10-14 (session 1, continued 2):** Pushed to GitHub (public); CI
-  green end-to-end (exec-bit guards, linters, multi-arch build+push to GHCR,
-  deploy self-skip). Delivered the deployment-mode batch: `update.sh` mode
-  detection + `--dry-run`, `configure.sh` image-mode choice, canonical
-  Deployment-modes docs, explicit volume names (rename-safe under UI
-  managers), and `docs/arcane.md` (running under a Docker management UI —
-  two recipes + one-owner rule). Forgejo leg deferred; firewall/SSH flags
-  still parked.
-- **2026-10-14 (session 1, continued 3):** Cycle-4 review (adversarial +
-  security in parallel): no blockers; `opencode debug config` empirically
-  confirmed OpenCode v2 honors the pack/permission config (resolves to the
-  normalized `permissions` array), and V2's global config path is the volume
-  path. Fixes: Arcane token-in-store warning, mode-aware bootstrap banner +
-  ci-cd pseudocode, CRLF trimming in the scripts, real volume names in docs,
-  privileged-DinD notes, least-privilege workflow secret passing. Security
-  audit: only `.example` files tracked, tree clean.
-- **2026-10-14 (session 1, continued 4):** Self-hosting under Arcane
-  documented end-to-end; added a baked agent commit identity
-  (`GIT_USER_NAME`/`GIT_USER_EMAIL` overrides) plus optional SSH commit
-  signing (`GIT_SIGN=1`, dedicated `secrets/ssh/signing_key`). Cycle-6 review
-  (adversarial + security, parallel): both GO/SAFE-TO-COMMIT; smoke tests
-  proved a signed commit object inside the image. Review fixes applied
-  (option-safe config values, Forgejo key semantics, verification wording).
-- **2026-10-15 (session 2):** Consolidated the workflow-pack config into one
-  grammar — `AGENT_PACK=<pack>[@<version>]` — removing the coupled knobs:
-  `SUPERPOWERS_TAG` (deprecation warning if still set) and the
-  `AGENTS_OPENCODE_VERSION` build arg (pack no longer baked; fetched at
-  runtime into `/data/opencode/npm`, bare = npm latest re-resolved each
-  start, offline falls back to the cached copy). superpowers bare = latest
-  git tag; spec upsert now replaces prior entries so tag switches converge.
-  DRY'd three duplicated jq plugin merges into
-  `set_plugin_spec`/`remove_plugin_specs` helpers. Validated: lint-sim ALL
-  CLEAN, 57 doc links resolve, image rebuilt (1.72 GB), 11/11 container smoke
-  checks pass (offline warm/cold, tag-switch convergence, invalid values,
-  deprecation, uninstall). Review gate (adversarial + security, parallel)
-  cycle 1 — fixes applied: `AGENT_PACK=none` now strips the superpowers entry;
-  exclusivity strip gated on the agents pack being healthy; empty-suffix `@`
-  warnings; git-ref validation (`sp_tag_ok`) on superpowers pins AND resolved
-  tags; latest excludes prereleases; `--ignore-scripts` on the npm fetch;
-  atomic same-volume config writes; `XDG_CACHE_HOME` on the volume (plugin
-  clones offline-safe). Re-verified: lint-sim CLEAN + 10-check fresh smoke
-  matrix (none-strip, invalid-pin keeps superpowers, empty suffixes, `..`
-  rejected, --ignore-scripts install, cache env). Follow-ups: runtime-pack pin
-  note in `docs/arcane.md` and a new `docs/upstreams.md` component/update-lane
-  index (cross-linked from README + ci-cd). Cycle-2 review (docs batch +
-  upstream-doc verification) — fixed: index accuracy (`up -d` not restart for
-  env changes, deploy semantics, `tmp/lint-sim.sh`/`runner-check.yml`
-  locations, host Docker apt wording), `sp_tag_ok` leading-dash guard,
-  Renovate cron syntax (Later syntax deprecated), npm-integrity wording.
-  Verified against current upstream docs: npm flags, git `ls-remote`/`sort` +
-  `check-ref-format`, Renovate docker-compose manager + `pinDigests`, OpenCode
-  plugin spec, dind TLS pattern, XDG `XDG_CACHE_HOME`. Promoted the local lint
-  simulation from gitignored `tmp/` into versioned `test/lint-sim.sh`, wired
-  into both CI lint jobs (GitHub + Forgejo: shellcheck lists + exec-bit
-  guards) — its digest pins now live in a tracked file; `tmp/` is scratch-only
-  again. Sandbox full-stack close-the-gap test caught + fixed a real DinD
-  networking bug (the `dind` service lacked the `docker` network alias that
-  `DOCKER_HOST` expects — agent→DinD was unreachable); fix verified live
-  including `docker run --rm hello-world` through DinD. Stage B (full-stack,
-  throwaway volumes): fresh compose up → DinD + agent healthy → pack fetched
-  (2.6.0, npm latest) → kimaki `gateway shard 0 ready` (self-hosted mode;
-  guilds pending invite) → torn down + volumes wiped.
-- **2026-10-17 (session 3):** Discord onboarding docs + permission normalization.
-  (1) `docs/discord-bot.md`: added a "What you need on Discord" mental model and
-  step 0 (create your server) — the assumed-knowledge gap; docs index row
-  updated. (2) Entrypoint: new `normalize_external_directory()` converges the
-  global `external_directory` rule to OpenCode v2's canonical `permissions`
-  array (`{"action":"external_directory","resource":"*","effect":"ask"}`,
-  appended last — last-match-wins) on every start; drops the pack's blanket
-  deny and the legacy v1 `external_directory` entry (deprecated `permission`
-  key only when empty; unrelated rules/keys survive); never-abort guards. Root
-  cause: agents-opencode 3.0.0 writes the v2 array with `deny` — silently
-  blocking cross-directory flows (a deny cannot be overridden by Discord
-  buttons). Validated: 8-case dash harness in the agent image (caught + fixed a
-  real jq nesting bug; idempotency + `set -e` survival test), shellcheck +
-  lint-sim ALL CLEAN, compose config, doc links; review gate (adversarial +
-  security) — no blockers, all findings applied. Investigations (no changes):
-  `docker:29-dind` log warnings all expected upstream (embedded containerd,
-  nft/fsverity benign); kimaki "3 catalog shortcuts" benign (skills dropped
-  first at Discord's 100 cap); OpenCode version drift = build-time latest +
-  runtime self-update. Open: deployment shows a persistent `docker`-hostname
-  DNS failure from the agent container (suspect the deployed compose predates
-  the dind `docker` alias) + the permission fix needs redeploy there.
-- **2026-10-18 (session 4):** Evaluated the forwarded box findings (kimaki.dev
-  tunnel DNS, DinD localhost ports, libstdc++ vs native prebuilds, pack skill
-  permissions, missing tuistory, tunnel CLI UX, external_directory prompt
-  noise) and audited all kimaki docs (features/guides/remote-access) for
-  feature-dependency gaps (diff viewer → critique, worktree auto-install →
-  pnpm/bun/yarn, visual verification → a browser tool, CI/automation → gh).
-  Shipped batch: entrypoint external-dir allow-list (`/tmp/opencode`,
-  `/data/reports`, `/data/transcripts`, `/data/attachments`); base →
-  `node:24-trixie-slim` (GLIBCXX 3.4.33 — fixes the critique/tree-sitter
-  prebuild failure class); new baked tools: critique 0.4.0, tuistory 0.12.0,
-  bun 1.4.3, playwright 1.64.1 (CLI + chromium system deps; browser binaries
-  stay in the volume cache), gh 2.102.0 (official apt repo), corepack shims;
-  ponytail default 5.3.2; graphifyy 0.9.92; docs + troubleshooting refreshed
-  (DinD ports, upload-to-discord ≤1.1.0 known issue, IPv6, version update
-  lanes) and lint-sim's header gains the daemon-side-DinD tar variant.
-  Validated: jq harness 7/7; image build + tool smokes green (image now bakes
-  kimaki 1.2.0); lint-sim ALL CLEAN; tokenless e2e sandbox ALL PASS
-  (isolation, convergence, permissions config, tool set, DinD path, clean
-  teardown); review gate (adversarial + security, parallel) — 0 blockers, all
-  findings applied. Open: commit; after deploy, retest upload-to-discord on
-  kimaki 1.2.0 and file the drafted kimaki issues (tunnel DNS + upload bug);
-  multi-arch CI covers the arm64 leg.
-- **2026-10-18 (session 4, follow-up):** the arm64 CI leg failed after merge:
-  critique's `tree-sitter-javascript` has no linux-arm64 prebuild, so npm
-  falls back to node-gyp and died on `make` not found. Fix: bake
-  `build-essential` (gcc/g++/make) — covers every native source-build
-  fallback and also lets agents compile node-gyp deps at runtime (+~0.2 GB).
-  To be validated by a local linux/arm64 buildx build under QEMU (build
-  completes + `critique --version` runs); amd64 unaffected.
-- **2026-10-18 (session 4, follow-up 2):** agents-opencode 3.1.0 (released
-  PR #115) logs "Global installs were found at BOTH the active path and the
-  legacy path" on pack-version upgrades — a false positive: its
-  `warnOnGlobalConfigSplit()` compares path strings and our
-  `/root/.config/opencode` symlink resolves to the same install (its "remove
-  those files" advice would delete the active install through the link).
-  kimaki >= 1.2 and the pack installer both honor XDG_CONFIG_HOME now, so
-  the symlink is retired (Dockerfile + entrypoint). Residual: the
-  "install is at the active path" info lines print once per pack version
-  bump — upstream should downgrade them to info-level.
-- **2026-10-18 (session 4, follow-up: dind noise triage):** dind log noise
-  classified: `containerd binary not found → embedded containerd`,
-  `experimental embedded-containerd mode`, fsverity and nft lines are
-  expected upstream (`docker:29-dind` ships no containerd binary). The
-  intermittent `healthcheck failed … only one connection allowed` is the
-  embedded containerd's single-client gRPC quirk when `docker info` queries
-  it — the dind healthcheck now uses `docker version` (hits `/version` only)
-  and troubleshooting.md documents the whole set. docker:29-dind stays
-  (pinning 28-dind was the alternative; rejected: keep the sidecar current,
-  the noise is upstream-experimental and harmless).
+Detailed history lives in git and the Discord transcripts; keep one short
+entry per session here.
+
+- **2026-10-14 (session 1):** Built the image, compose stack, secrets/age
+  overlay, GitHub + Forgejo CI, host scripts, and docs. Settled workflow packs
+  behind `AGENT_PACK`; added ponytail + graphify extras; fixed a 684 MB npm
+  cache leak (image 2.47 → 1.65 GB). GitHub CI green, GHCR published;
+  deployment modes + Arcane docs landed after 4 review cycles.
+- **2026-10-15 (session 2):** Consolidated packs to
+  `AGENT_PACK=<pack>[@<version>]` (runtime fetch, offline cache) and promoted
+  the lint simulation to `test/lint-sim.sh`, wired into both CI lints. Caught
+  and fixed the missing dind `docker` network alias; full-stack sandbox pass.
+- **2026-10-17 (session 3):** Added Discord onboarding docs and the entrypoint
+  `normalize_external_directory()` fix — agents-opencode 3.0.0 wrote a blanket
+  v2 `deny`; the entrypoint now converges it to `ask` on every start.
+- **2026-10-18 (session 4):** Moved to `node:24-trixie-slim` (GLIBCXX
+  3.4.33), baked critique/tuistory/bun/playwright/gh, added the external-dir
+  allow-list, refreshed docs. Kimaki 1.2.0; tool smokes + tokenless e2e pass.
+  arm64 native fallbacks need `build-essential` (baked). Retired the
+  `/root/.config/opencode` symlink (agents-opencode 3.1.0 false positive).
+  Triaged dind noise and switched its healthcheck to `docker version`.
+  Baked graphify's `openai` extra; built the repo graph (91 nodes) and added
+  the graphify convention above.
+- **Open:** deploy the rebuilt image; retest `upload-to-discord` on kimaki
+  1.2.0; file the drafted kimaki issues (tunnel DNS, upload bug); Forgejo
+  runner leg.
