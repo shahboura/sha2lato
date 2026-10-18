@@ -66,7 +66,11 @@ services:
       - dind-certs:/certs
       - dind-data:/var/lib/docker
     healthcheck:
-      test: ["CMD", "docker", "info"]
+      # docker version hits /version only. docker info queries containerd,
+      # which in docker 29's dind (experimental embedded-containerd mode) can
+      # transiently answer "only one connection allowed" (single-client
+      # embedded server) — see docs/troubleshooting.md.
+      test: ["CMD", "docker", "version", "--format", "{{.Server.Version}}"]
       interval: 30s
       timeout: 10s
       start_period: 20s
