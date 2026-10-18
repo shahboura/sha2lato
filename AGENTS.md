@@ -205,6 +205,16 @@ Commits may be SSH-signed (git ≥ 2.34: `gpg.format ssh` + `user.signingkey` +
   fallback and also lets agents compile node-gyp deps at runtime (+~0.2 GB).
   To be validated by a local linux/arm64 buildx build under QEMU (build
   completes + `critique --version` runs); amd64 unaffected.
+- **2026-10-18 (session 4, follow-up 2):** agents-opencode 3.1.0 (released
+  PR #115) logs "Global installs were found at BOTH the active path and the
+  legacy path" on pack-version upgrades — a false positive: its
+  `warnOnGlobalConfigSplit()` compares path strings and our
+  `/root/.config/opencode` symlink resolves to the same install (its "remove
+  those files" advice would delete the active install through the link).
+  kimaki >= 1.2 and the pack installer both honor XDG_CONFIG_HOME now, so
+  the symlink is retired (Dockerfile + entrypoint). Residual: the
+  "install is at the active path" info lines print once per pack version
+  bump — upstream should downgrade them to info-level.
 - **2026-10-18 (session 4, follow-up: dind noise triage):** dind log noise
   classified: `containerd binary not found → embedded containerd`,
   `experimental embedded-containerd mode`, fsverity and nft lines are

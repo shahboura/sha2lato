@@ -111,10 +111,10 @@ ENV XDG_DATA_HOME=/data/opencode/data \
     XDG_CONFIG_HOME=/data/opencode/config \
     XDG_CACHE_HOME=/data/opencode/cache
 
-# Some tools (e.g. the agents-opencode installer) target ~/.config/opencode
-# regardless of XDG_CONFIG_HOME — symlink it onto the volume-backed XDG path
-# so everything converges on /data/opencode/config/opencode.
-RUN mkdir -p /root/.config && ln -sfn /data/opencode/config/opencode /root/.config/opencode
+# No legacy ~/.config/opencode symlink: kimaki (>= 1.2) and the
+# agents-opencode installer (>= 3.1) both honor XDG_CONFIG_HOME. A symlink at
+# the legacy path made the installer report "installs at BOTH paths" and
+# advise deleting them — through the link that deletes the active install.
 
 # ── Bake the ui-ux-pro-max skill ───────────────────────────────────────────
 # Scratch install runs in a tmpfs mount, so uipro's working files never land
