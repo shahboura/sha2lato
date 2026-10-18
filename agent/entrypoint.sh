@@ -55,13 +55,10 @@ if [ -n "${SUPERPOWERS_TAG:-}" ]; then
   echo "[entrypoint] WARNING: SUPERPOWERS_TAG is deprecated and ignored — use AGENT_PACK=superpowers@<tag>" >&2
 fi
 
-# Converge ~/.config/opencode onto the volume-backed XDG path — some tools
-# (e.g. the agents-opencode installer) hardcode ~/.config/opencode.
-mkdir -p /root/.config
-if [ ! -L /root/.config/opencode ]; then
-  rm -rf /root/.config/opencode
-  ln -s "$CONF_DIR" /root/.config/opencode
-fi
+# No legacy ~/.config/opencode symlink: kimaki and the agents-opencode
+# installer honor XDG_CONFIG_HOME; a symlink at the legacy path made the
+# installer warn about "installs at BOTH paths" and advise deleting them
+# (through the link, that deletes the active install).
 
 # Version of the agents-opencode copy currently on the volume, if any.
 ao_installed_version() {
