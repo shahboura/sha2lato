@@ -1,6 +1,6 @@
 # Weekly CVE-freshness rebuild: republish :latest from the current source.
 #
-# Pulls the newest base image (node:24-trixie-slim), kimaki@latest, opencode v2, and
+# Pulls the newest base image (node:26-trixie-slim), kimaki@latest, opencode v2, and
 # Debian security patches at build time, then deploys to the host so running
 # boxes pick up the fixes. Monday 03:17 UTC + manual dispatch.
 name: Rebuild (weekly)

@@ -69,6 +69,7 @@ Rarely-needed knobs:
 - `deploy/update.sh` **detects the mode** from `compose/.env` and does the right thing; `--dry-run` prints the plan without executing.
 - **Never run `up -d --build` in registry mode** — with both `image:` and `build:` set, it builds locally and tags over the registry ref instead of pulling.
 - Switching modes = change the one line (`./deploy/configure.sh` asks), then `./deploy/update.sh`.
+- Registry refs take semver releases too: `:1.4.2` (frozen release), `:1.4` / `:1` (moving streams), `:latest` (newest build, refreshed weekly) — see [versioning.md](versioning.md).
 
 ## Build-time (custom image)
 

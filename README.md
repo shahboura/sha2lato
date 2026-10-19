@@ -63,6 +63,7 @@ Full walkthroughs: [docs/](docs/README.md) — or read the rendered site at **ht
 | Secrets, SSH keys, fork guide | [docs/secrets.md](docs/secrets.md) |
 | Configuration — every knob in one place | [docs/configuration.md](docs/configuration.md) |
 | CI/CD — both pipelines, registries, deploys | [docs/ci-cd.md](docs/ci-cd.md) |
+| Image versioning & releases (SemVer) | [docs/versioning.md](docs/versioning.md) |
 | Using it from your phone (day 2) | [docs/usage.md](docs/usage.md) |
 | Optional self-hosted GitHub runner | [docs/github-runner.md](docs/github-runner.md) |
 | Running it under a compose UI (Arcane, Dockge, Portainer, …) | [docs/compose-ui.md](docs/compose-ui.md) |

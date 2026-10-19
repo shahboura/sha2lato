@@ -41,6 +41,17 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Derive version stamp
+        id: version
+        run: |
+          ref="${GITHUB_REF:-}"
+          if [ "${GITHUB_REF_TYPE:-}" = "tag" ] || [ "${ref#refs/tags/}" != "$ref" ]; then
+            v="${GITHUB_REF_NAME:-}"; [ -n "$v" ] || v="${ref#refs/tags/}"
+            echo "value=${v#v}" >> "$GITHUB_OUTPUT"
+          else
+            echo "value=sha-$(git rev-parse --short=7 HEAD)" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Docker metadata
         id: meta
         uses: docker/metadata-action@v5
@@ -51,6 +62,7 @@ jobs:
             type=sha,prefix=sha-,format=short
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
 
       - name: Build and push
         uses: docker/build-push-action@v6
@@ -60,5 +72,6 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          build-args: SHA2LATO_VERSION=${{ steps.version.outputs.value }}
           cache-from: type=gha
           cache-to: type=gha,mode=max

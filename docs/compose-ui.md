@@ -24,6 +24,8 @@ name: sha2lato
 services:
   agent:
     image: ghcr.io/YOUR_USERNAME/sha2lato-agent:latest
+    # or pin a release: :1 (minor stream), :1.4 (patch stream), :1.4.2 (frozen)
+    # — see docs/versioning.md
     restart: unless-stopped
     env_file: .env
     environment:

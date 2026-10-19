@@ -17,3 +17,4 @@ New here? Read **1 → 2**, run `./deploy/configure.sh`, and you're running in ~
 | 11 | [Baked-in tools & commands](commands.md) | Every preinstalled CLI, plugin, and slash command with verified examples |
 | 12 | [Docs website (optional)](website.md) | Holocron site built from these docs, deployed to Cloudflare Workers — local dev, CI deploy, custom domains |
 | 13 | [Agent-driven setup](agent-setup.md) | Point an agent at it and it can deploy the box end to end — human-in-the-loop steps, exact commands, verification |
+| 14 | [Versioning & releases](versioning.md) | SemVer image releases from conventional commits: bump rules, tag taxonomy and mutability, pinning guide, release flow, bootstrap |

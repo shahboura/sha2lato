@@ -1,0 +1,53 @@
+# Release automation: conventional commits -> release PR -> tag + GitHub Release
+# -> tagged image build.
+#
+# Why the dispatch step: tags created with GITHUB_TOKEN do not trigger other
+# workflows (GitHub suppresses cascade events), so the tagged build is
+# dispatched explicitly at the tag ref — ci.yml's semver tag logic then runs
+# unchanged. Works the same on forks, with no extra secrets.
+#
+# Scheme, bootstrap and pinning: docs/versioning.md.
+name: release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+concurrency:
+  group: release-please
+  cancel-in-progress: false
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    outputs:
+      release_created: ${{ steps.release.outputs.release_created }}
+      tag_name: ${{ steps.release.outputs.tag_name }}
+    steps:
+      - name: Release Please
+        id: release
+        uses: googleapis/release-please-action@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+  publish:
+    name: build the released tag
+    needs: [release-please]
+    if: needs.release-please.outputs.release_created == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    steps:
+      - name: Dispatch the tagged build
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh workflow run ci.yml \
+            --ref "${{ needs.release-please.outputs.tag_name }}" \
+            --repo "$GITHUB_REPOSITORY"

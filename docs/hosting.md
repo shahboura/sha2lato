@@ -42,7 +42,7 @@ docker compose -f compose/docker-compose.yml up -d --build
 
 ### Updates
 
-`deploy/update.sh` detects the [deployment mode](configuration.md#deployment-modes) from `compose/.env`, then either rebuilds on the host or pulls the registry image and recreates the stack. (`--dry-run` prints the plan.)
+`deploy/update.sh` detects the [deployment mode](configuration.md#deployment-modes) from `compose/.env`, then either rebuilds on the host or pulls the registry image and recreates the stack. (`--dry-run` prints the plan.) Registry users can pin a release for change control — `:1`, `:1.4`, `:1.4.2` ([versioning.md](versioning.md)).
 
 - **CI mode (recommended):** set your `DEPLOY_SSH_*` repo secrets and every push to `main` (plus the weekly rebuild) deploys automatically.
 - **Manual:** `cd /opt/sha2lato && ./deploy/update.sh`

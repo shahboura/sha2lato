@@ -8,6 +8,9 @@
 
 set -e
 
+# Image version stamp (git tag in releases, sha-<short> on main builds).
+echo "[entrypoint] sha2lato ${SHA2LATO_VERSION:-dev}"
+
 # ── Sync baked skills into the global OpenCode skills dir ──────────────────
 # ui-ux-pro-max: always on. graphify usage guide: gated by GRAPHIFY
 # (default 1; set 0/off/false to disable — removes it from the volume too).
