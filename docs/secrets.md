@@ -14,7 +14,7 @@
 | Registry credentials | `REGISTRY_USERNAME`/`REGISTRY_TOKEN` repo secrets (Forgejo) / automatic `GITHUB_TOKEN` (GitHub) | ❌ | CI pipelines |
 | age overlay (optional) | `secrets/age/*.age` + `secrets/age/recipient` (encrypted + public key — **safe to commit**), private key stays in `~/.config/sha2lato/age.key` | ✅ for `*.age` and `recipient` | you, on any machine |
 
-> If you deploy with a UI like [Arcane](arcane.md) using its self-contained recipe, the bot token lives in that tool's project `.env` instead of `secrets/.env.agent`. The same rule applies: treat it as a secret, keep it out of any Git sync or export, and prefer the host-checkout recipe when you can.
+> If you deploy with a compose management UI like [Arcane](compose-ui.md) using its self-contained recipe, the bot token lives in that tool's project `.env` instead of `secrets/.env.agent`. The same rule applies: treat it as a secret, keep it out of any Git sync or export, and prefer the host-checkout recipe when you can.
 
 ## Runtime env files
 

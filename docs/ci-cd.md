@@ -13,6 +13,7 @@ Both are mirrors of each other: lint → build (multi-arch) → deploy, plus a *
 
 - **`ci.yml`** — on push to `main`, version tags (`v*`), manual dispatch: runs `lint` (shellcheck + hadolint + actionlint, in pinned containers), calls the reusable **`build.yml`** (QEMU + buildx → GHCR; tags: `latest`, `sha-…`, semver), then calls **`deploy.yml`**.
 - **`deploy.yml`** — reusable, **self-skipping**: if `DEPLOY_SSH_HOST` isn't configured it logs a notice and succeeds (forks stay green). Serialized with `concurrency: deploy`.
+- **`website.yml`** — optional docs website: builds `website/` and deploys it to Cloudflare Workers when `CLOUDFLARE_API_TOKEN` + `CLOUDFLARE_ACCOUNT_ID` are set (self-skipping otherwise — forks stay green; [website.md](website.md)).
 - **`rebuild.yml`** — the weekly cron: build + deploy, no code change required.
 - **`renovate.json`** — Renovate opens PRs for base-image and action updates (`pinDigests` on).
 

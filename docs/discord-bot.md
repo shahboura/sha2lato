@@ -22,7 +22,7 @@ You're now the server owner — which includes the **Manage Server** permission 
 
 ## 1. Create the application
 
-1. Open <https://discord.com/developers/applications> → **New Application** → give it a name (e.g. `sha2lato`).
+1. Open the [Developer Portal](https://discord.com/developers/applications) → **New Application** → give it a name (e.g. `sha2lato`).
 2. Go to the **Bot** tab.
 3. **Enable “Message Content Intent”** — required for Kimaki to read your messages. Without it, the bot connects but ignores everything.
 4. Make sure **Public Bot** matches your preference (leave it on if you want the shareable install link to work for others; off for yourself only).

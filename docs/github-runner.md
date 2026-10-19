@@ -8,7 +8,7 @@
 
 ## Setup
 
-1. Create a **classic PAT** with `repo` scope at <https://github.com/settings/tokens> (org runner: `admin:org`).
+1. Create a **classic PAT** with `repo` scope at [github.com/settings/tokens](https://github.com/settings/tokens) (org runner: `admin:org`).
 2. On the host:
 
 ```bash
