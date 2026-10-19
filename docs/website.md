@@ -4,6 +4,8 @@ The repo also ships a **documentation website** built from the same markdown you
 
 The site deploys as a **Cloudflare Worker** (`sha2lato-docs`) via `wrangler`. It is **optional**: forking, ignoring, or deleting `website/` does not affect the box. CI skips the deploy when the Cloudflare secrets are unset, so forks stay green.
 
+The upstream repo's live instance is **https://sha2lato.elkodr.com** (custom domain on the `sha2lato-docs` Worker).
+
 | File | What it is |
 |---|---|
 | `website/docs.json` | Site config: name, colors, fonts, navigation groups |
