@@ -129,10 +129,8 @@ entry per session here.
   `fix/dependabot-alerts`), and SemVer image versioning: release-please cuts
   releases from Conventional Commits (`X.Y.Z`/`X.Y`/`X` tags; `latest` +
   `sha-…` unchanged), version stamp baked into the image and both pipelines;
-  bootstrap `v1.0.0` tag pending (`docs/versioning.md`).
+  `v1.0.0` tagged and published (`docs/versioning.md`).
 - **Open:** deploy the rebuilt image; retest `upload-to-discord` on kimaki
   1.2.0; file the drafted kimaki issues (tunnel DNS, upload bug); Forgejo
   runner leg; verify self-hosted critique uploads once `diff.<domain>`
-  resolves (`CRITIQUE_WORKER_URL` wiring is in place); merge
-  `fix/dependabot-alerts`; push the bootstrap `v1.0.0` tag after merging the
-  versioning branch.
+  resolves (`CRITIQUE_WORKER_URL` wiring is in place).
