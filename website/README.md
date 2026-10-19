@@ -14,6 +14,13 @@ The pages in `src/` are thin wrappers: each imports the real markdown from `../R
 | `npm run preview` | serve the production build locally |
 | `npm run deploy` | build + `wrangler deploy` (needs `CLOUDFLARE_API_TOKEN` + `CLOUDFLARE_ACCOUNT_ID`) |
 
+## Dependency overrides
+
+`package.json` `overrides` force two patched transitive deps — `katex` (via
+`mermaid`) and `postcss-selector-parser` (via `@tailwindcss/typography`) —
+because neither advisory has an in-range fix upstream. Drop each override once
+`@holocron.so/vite` pulls a patched range on its own.
+
 ## Layout
 
 - `docs.json` — site name, colors, fonts, navigation (groups + page slugs)
