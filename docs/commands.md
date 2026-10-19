@@ -166,4 +166,4 @@ Add `--persist -p "<Name>" --output-dir "<project-root>"` to save a design syste
 | `! <cmd>` (Discord) / `docker compose -f compose/docker-compose.yml exec agent <cmd>` | Run any shell command raw — in the project folder / from the host |
 | `pnpm` / `yarn` | corepack shims — respect the project's `packageManager` field |
 
-Also baked: `git`, `node` 24, `python3` (the skills' search scripts are stdlib Python), `jq`, `curl`, `unzip`, `openssh-client`, `corepack`.
+Also baked: `git`, `node` 26, `python3` (the skills' search scripts are stdlib Python), `jq`, `curl`, `unzip`, `openssh-client`, `corepack` (npm-installed — Node 26 no longer ships it). `build-essential` is arm64-only; on amd64 run `apt-get update && apt-get install -y build-essential` if a project needs to compile native code.

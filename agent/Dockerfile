@@ -2,9 +2,10 @@
 # sha2lato agent box — Kimaki + OpenCode 2 + ui-ux-pro-max, Docker-ready.
 #
 # Design notes:
-# - Base: node:24-trixie-slim (Debian 13). Kimaki's own Dockerfile stays on
-#   bookworm; trixie is chosen here for GCC 14's libstdc++ (GLIBCXX 3.4.33),
-#   which native prebuilds (critique/tree-sitter) require.
+# - Base: node:26-trixie-slim (Debian 13, Node 26 — LTS from 2026-10-28).
+#   Kimaki's own Dockerfile stays on bookworm; trixie is chosen here for GCC
+#   14's libstdc++ (GLIBCXX 3.4.33), which native prebuilds (critique/
+#   tree-sitter) require.
 # - Agent tools baked for kimaki features: critique (diff viewer), tuistory
 #   (background sessions), bun, playwright CLI + chromium system deps
 #   (headless screenshots — install browsers with `playwright install`; they
@@ -21,7 +22,7 @@
 #   OpenCode global skills dir by entrypoint.sh on every start, so image
 #   rebuilds update the skill while user-added skills on the volume survive.
 
-FROM node:24-trixie-slim
+FROM node:26-trixie-slim
 
 ARG DEBIAN_FRONTEND=noninteractive
 # Pin for reproducible builds; "latest" by design (weekly rebuilds refresh)
@@ -43,9 +44,12 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 # git, curl, unzip, ca-certificates  : required by kimaki / opencode
 # openssh-client                     : git over SSH (Forgejo/GitHub deploy keys)
 # python3                            : ui-ux-pro-max search scripts (stdlib only)
-# build-essential                    : node-gyp fallback builds — arm64 npm deps
+# build-essential (arm64 only)       : node-gyp fallback builds — arm64 npm deps
 #                                      without prebuilds (critique's tree-sitter
-#                                      grammars) + native deps agents compile
+#                                      grammars). amd64 resolves prebuilds, so it
+#                                      is skipped there (~61 MB); an agent that
+#                                      must compile installs it on demand (root
+#                                      container, network access)
 # docker-ce-cli + buildx + compose   : docker CLI for the DinD sidecar, so the
 #                                      agent can build AND run project images
 # gh                                 : GitHub CLI from its official apt repo —
@@ -55,8 +59,10 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN set -eux; \
     apt-get update; \
     apt-get install -y --no-install-recommends \
-        build-essential \
         ca-certificates curl git openssh-client unzip python3 python3-venv jq; \
+    if [ "$(dpkg --print-architecture)" = "arm64" ]; then \
+        apt-get install -y --no-install-recommends build-essential; \
+    fi; \
     install -m 0755 -d /etc/apt/keyrings; \
     curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc; \
     chmod a+r /etc/apt/keyrings/docker.asc; \
@@ -82,18 +88,32 @@ RUN set -eux; \
 #   baked — run `playwright install chromium` once per revision and they land
 #   in the /data volume cache (XDG_CACHE_HOME below), surviving rebuilds and
 #   matching whatever version a project or the CLI needs.
-# The npm cache is purged in the SAME layer: Docker layers are additive, so a
-# later `rm` would not reclaim it — without this it adds ~680 MB to the image.
+# corepack: not shipped in node:26 (it left the distribution; the npm package
+#   is the supported install) — still needed for the pnpm/yarn shims below.
+# All pruning happens in the SAME layer as the install: Docker layers are
+# additive, so a later `rm` would not reclaim the bytes. The npm cache alone
+# is ~680 MB. Source maps and type declarations are never read at runtime
+# (~186 MB); licenses and package metadata stay for redistribution. Do NOT
+# prune "test" dirs: playwright exports its test runner at runtime (lib/mcp/
+# test, the playwright/test entrypoint). critique's TUI pulls a separately
+# imported 3D/WebGPU entry (three/planck/bun-webgpu/@dimforge, ~60 MB) that
+# the diff path never loads.
 RUN npm install -g kimaki@${KIMAKI_VERSION} ui-ux-pro-max-cli@${UIPRO_VERSION} \
         critique@${CRITIQUE_VERSION} tuistory@${TUISTORY_VERSION} \
-        bun@${BUN_VERSION} playwright@${PLAYWRIGHT_VERSION} \
+        bun@${BUN_VERSION} playwright@${PLAYWRIGHT_VERSION} corepack@latest \
     && npm cache clean --force \
-    && rm -rf /root/.npm
+    && rm -rf /root/.npm \
+    && find /usr/local/lib/node_modules -type f \
+         \( -name '*.map' -o -name '*.d.ts' \) -delete \
+    && rm -rf \
+         /usr/local/lib/node_modules/critique/node_modules/{three,planck,bun-webgpu,bun-webgpu-linux-x64,@dimforge}
 
 # ── Chromium system deps + corepack shims ──────────────────────────────────
 # playwright install-deps pulls the X/GTK libraries Chromium needs (official
 # per-distro mapping — handles trixie's package renames); corepack provides
 # pnpm/yarn shims for worktree auto-install and repos that pin their manager.
+# Keep the mesa/LLVM chain this pulls in: purging it makes headless Chromium
+# fail to start (exit 127 — libgbm/libGL missing), tested 2026-10-19.
 RUN corepack enable \
     && playwright install-deps chromium \
     && apt-get clean \
@@ -163,6 +183,16 @@ WORKDIR /data
 
 COPY entrypoint.sh /usr/local/bin/sha2lato-entrypoint
 RUN chmod 0755 /usr/local/bin/sha2lato-entrypoint
+
+# ── Build-time smoke ───────────────────────────────────────────────────────
+# The npm-layer pruning is only safe while every baked CLI still starts; fail
+# the build (weekly rebuild included) instead of shipping a broken tool.
+RUN export XDG_DATA_HOME=/tmp/smoke XDG_STATE_HOME=/tmp/smoke \
+           XDG_CONFIG_HOME=/tmp/smoke XDG_CACHE_HOME=/tmp/smoke; \
+    node -v && npm -v && python3 -V && corepack --version \
+    && kimaki --help >/dev/null && critique --help >/dev/null \
+    && tuistory --version && bun --version && playwright --version \
+    && graphify --help >/dev/null && opencode --version
 
 # No EXPOSE: the bot connects OUT to Discord; docker builds go through the
 # DinD sidecar (DOCKER_HOST); the kimaki lock port is container-internal.
