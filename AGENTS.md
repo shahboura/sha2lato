@@ -108,9 +108,10 @@ entry per session here.
   3D/WebGPU optional deps removed, `build-essential` arm64-only. Do **not**
   prune `test` dirs — playwright exports `lib/mcp/test` at runtime — and do
   not drop the mesa/LLVM chain from `playwright install-deps`: purging it
-  breaks headless Chromium (exit 127). Image 3.42 → 2.73 GB
+  breaks headless Chromium (exit 127). Image 3.42 → 2.74 GB
   (`docker images`); build + in-image smoke (tools, `critique --web`,
-  Chromium screenshot, pnpm/yarn shims) + `test/lint-sim.sh` green.
+  Chromium screenshot, pnpm/yarn shims) + `test/lint-sim.sh` green; the arm64
+  image also builds and smokes clean under QEMU (with `build-essential`).
 - **Open:** deploy the rebuilt image; retest `upload-to-discord` on kimaki
   1.2.0; file the drafted kimaki issues (tunnel DNS, upload bug); Forgejo
   runner leg.
