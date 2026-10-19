@@ -46,6 +46,14 @@ Deploying the box rather than developing it? Point your agent at `docs/agent-set
   (parallel when independent) so verbose build logs stay out of the main
   context; have them report compact pass/fail summaries and sizes.
 
+## Sharing diffs
+
+In-chat diffs are the default. `critique --web "<title>"` uploads to the
+self-hosted instance only when `CRITIQUE_WORKER_URL` is set (operator sets it
+in `secrets/.env.agent` or the compose-UI env editor, then recreates the
+agent). Unset or empty falls back to the third-party `critique.work` — keep
+diffs in chat then.
+
 ## Current state
 
 The box is complete and review-gated: agent image (Kimaki + OpenCode 2 +
@@ -114,4 +122,5 @@ entry per session here.
   image also builds and smokes clean under QEMU (with `build-essential`).
 - **Open:** deploy the rebuilt image; retest `upload-to-discord` on kimaki
   1.2.0; file the drafted kimaki issues (tunnel DNS, upload bug); Forgejo
-  runner leg.
+  runner leg; verify self-hosted critique uploads once `diff.<domain>`
+  resolves (`CRITIQUE_WORKER_URL` wiring is in place).

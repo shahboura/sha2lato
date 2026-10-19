@@ -83,6 +83,8 @@ Graphs are per-checkout in `graphify-out/` (keep it out of git).
 
 Flags: `--staged`, `--commit <ref>`, `--pdf`, `--image`, `--json`, `--password` (or `CRITIQUE_PASSWORD`).
 
+Uploads go to the public `critique.work` unless `CRITIQUE_WORKER_URL` points at a self-hosted instance ([configuration.md](configuration.md)).
+
 ## tuistory — named background terminal sessions
 
 Persistent PTY sessions in a background daemon ([remorses/tuistory](https://github.com/remorses/tuistory)) — the pattern for keeping dev servers alive (see [usage.md](usage.md#everyday-workflows) → Tunnels):
