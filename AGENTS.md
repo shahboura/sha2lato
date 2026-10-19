@@ -24,6 +24,10 @@ Deploying the box rather than developing it? Point your agent at `docs/agent-set
   official apt repos/installers) or pinned (`tag@digest`, versioned build
   args) — do not add unpinned third-party images without documenting the
   trade-off.
+- **Commits:** Conventional Commits — `feat:`/`fix:`/`chore:`/`docs:` (scope
+  optional), `!` or a `BREAKING CHANGE:` trailer marks a major image release.
+  release-please turns merges into version bumps; released `vX.Y.Z` tags are
+  never re-pushed ([versioning.md](docs/versioning.md)).
 - **Validate changes** (from repo root): `docker compose -f
   compose/docker-compose.yml config --quiet`; `test/lint-sim.sh` (full CI-job
   simulation — lint via the same job image + socket pattern CI uses; copy the
@@ -120,7 +124,15 @@ entry per session here.
   (`docker images`); build + in-image smoke (tools, `critique --web`,
   Chromium screenshot, pnpm/yarn shims) + `test/lint-sim.sh` green; the arm64
   image also builds and smokes clean under QEMU (with `build-essential`).
+- **2026-10-19 (session 7):** Critique self-hosting wiring (env-template
+  placeholder + docs), docs-site Dependabot fix (branch
+  `fix/dependabot-alerts`), and SemVer image versioning: release-please cuts
+  releases from Conventional Commits (`X.Y.Z`/`X.Y`/`X` tags; `latest` +
+  `sha-…` unchanged), version stamp baked into the image and both pipelines;
+  bootstrap `v1.0.0` tag pending (`docs/versioning.md`).
 - **Open:** deploy the rebuilt image; retest `upload-to-discord` on kimaki
   1.2.0; file the drafted kimaki issues (tunnel DNS, upload bug); Forgejo
   runner leg; verify self-hosted critique uploads once `diff.<domain>`
-  resolves (`CRITIQUE_WORKER_URL` wiring is in place).
+  resolves (`CRITIQUE_WORKER_URL` wiring is in place); merge
+  `fix/dependabot-alerts`; push the bootstrap `v1.0.0` tag after merging the
+  versioning branch.

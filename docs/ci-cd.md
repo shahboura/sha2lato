@@ -7,12 +7,13 @@ Two pipelines, one goal: build the agent image for **linux/amd64 + linux/arm64**
 | GitHub | `.github/workflows/` | GitHub's free hosted runners (public repo) | GHCR (`ghcr.io/<owner>/sha2lato-agent`) | SSH → `deploy/update.sh` |
 | Forgejo | `.forgejo/workflows/ci.yml` | **your existing act_runner** | your Forgejo container registry | SSH → `deploy/update.sh` |
 
-Both are mirrors of each other: lint → build (multi-arch) → deploy, plus a **weekly rebuild** (Monday 03:17 UTC) that republishes `:latest` with fresh base layers and deploys it, keeping hosts CVE-fresh without code changes.
+Both are mirrors of each other: lint → build (multi-arch) → deploy, plus a **weekly rebuild** (Monday 03:17 UTC) that republishes `:latest` with fresh base layers and deploys it, keeping hosts CVE-fresh without code changes. SemVer releases are cut separately — [versioning.md](versioning.md).
 
 ## GitHub pipeline
 
-- **`ci.yml`** — on push to `main`, version tags (`v*`), manual dispatch: runs `lint` (shellcheck + hadolint + actionlint, in pinned containers), calls the reusable **`build.yml`** (QEMU + buildx → GHCR; tags: `latest`, `sha-…`, semver), then calls **`deploy.yml`**.
+- **`ci.yml`** — on push to `main`, version tags (`v*`), manual dispatch: runs `lint` (shellcheck + hadolint + actionlint, in pinned containers), calls the reusable **`build.yml`** (QEMU + buildx → GHCR; tags: `latest`, `sha-…`, and on version tags `X.Y.Z` / `X.Y` / `X`), then calls **`deploy.yml`** (main only).
 - **`deploy.yml`** — reusable, **self-skipping**: if `DEPLOY_SSH_HOST` isn't configured it logs a notice and succeeds (forks stay green). Serialized with `concurrency: deploy`.
+- **`release.yml`** — release automation: [release-please](https://github.com/googleapis/release-please) watches `main`, opens a release PR from Conventional Commits, and on merge creates the `vX.Y.Z` tag + GitHub Release. Because `GITHUB_TOKEN`-created tags don't trigger push workflows, it then dispatches `ci.yml` at the tag to publish the semver image tags. Scheme, pinning, bootstrap: [versioning.md](versioning.md).
 - **`website.yml`** — optional docs website: builds `website/` and deploys it to Cloudflare Workers when `CLOUDFLARE_API_TOKEN` + `CLOUDFLARE_ACCOUNT_ID` are set (self-skipping otherwise — forks stay green; [website.md](website.md)).
 - **`rebuild.yml`** — the weekly cron: build + deploy, no code change required.
 - **`renovate.json`** — Renovate opens PRs for base-image and action updates (`pinDigests` on).
@@ -22,6 +23,7 @@ Both are mirrors of each other: lint → build (multi-arch) → deploy, plus a *
 ## Forgejo pipeline
 
 - On push to `main`, version tags, the weekly cron, and manual dispatch: `lint` → `build` (multi-arch default) → `deploy`. The deploy step has the same self-skipping behavior.
+- **Releases:** push a `vX.Y.Z` tag yourself (release-please runs on GitHub only) — this pipeline builds the semver tags. Scheme + pinning: [versioning.md](versioning.md).
 - **Registry:** your Forgejo instance's built-in container registry. Set the two `forgejo.example.com` placeholders in the workflow to your host, and add repo secrets `REGISTRY_USERNAME` + `REGISTRY_TOKEN` (a Forgejo token with package write access).
 - Override platforms on manual dispatch via the `platforms` input (e.g. `linux/amd64` to skip the heavy QEMU arm64 leg).
 
@@ -80,6 +82,7 @@ Component-by-component map — upstream repo, license, pin location, update lane
 | Layer | How it stays fresh |
 |---|---|
 | Base image + system packages | Weekly rebuild pulls the newest `node:26-trixie-slim` and apt state; both pipelines republish `:latest` and deploy |
+| Image version | SemVer releases from Conventional Commits (release-please + `release.yml`); the weekly rebuild moves only `:latest` + `:sha-…`, released `X.Y.Z` tags stay frozen — [versioning.md](versioning.md) |
 | kimaki / ui-ux-pro-max-cli / critique / tuistory / bun / playwright (npm) | Installed `@latest` at build time — the weekly rebuild refreshes them. Build args can pin versions for reproducible builds instead |
 | agents-opencode pack (npm) | Runtime-fetched by the entrypoint, not baked: bare `AGENT_PACK=agents-opencode` tracks npm latest on every container start; pin `agents-opencode@x.y.z` to lock the version (fetched with lifecycle scripts disabled). Cached on the volume; offline starts use the cached copy — the log warns if it differs from a freshly pinned version |
 | superpowers plugin (git) | Runtime-fetched by OpenCode from a git tag: bare = latest tag re-resolved each start; pin `superpowers@v7.0.0` for exactness |
@@ -113,5 +116,6 @@ Everything this repo builds or runs is pinned or first-party, and was verified a
 - **Workflow packs** (runtime-fetched by the entrypoint/OpenCode, never baked): [agents-opencode](https://github.com/shahboura/agents-opencode) (MIT; npm; exact pins supported; registry metadata carries sha512 integrity for each tarball; fetches run with lifecycle scripts disabled; provenance attestations via GitHub Actions OIDC trusted publishing) and [superpowers](https://github.com/obra/superpowers) (MIT; git, tag-pinned).
 - **Extras**: [ponytail](https://github.com/DietrichGebert/ponytail) (MIT; npm plugin, pinned spec) and [graphify](https://github.com/Graphify-Labs/graphify) (Apache-2.0; PyPI `graphifyy`, pure-Python wheel, pinned build arg).
 - **CI tooling**: actionlint (MIT), hadolint (GPL-3.0), shellcheck (GPL-3.0) — GPL tools are invoked as separate processes only; nothing is linked or redistributed. All three pinned by digest.
+- **Release automation**: [release-please-action](https://github.com/googleapis/release-please-action) (Apache-2.0) — turns Conventional Commits into release PRs, tags, and GitHub Releases ([versioning.md](versioning.md)); consumed as a pinned action tag, refreshed by Renovate.
 - **Forgejo job image**: Docker Official `node:24-bookworm` + Docker's apt repo (official-only reference); community act image documented as an alternative.
 - **Optional GitHub runner**: [myoung34/github-runner](https://github.com/myoung34/docker-github-actions-runner) (GPL-3.0 — user-pulled image, not redistributed).

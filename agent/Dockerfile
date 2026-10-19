@@ -184,6 +184,13 @@ WORKDIR /data
 COPY entrypoint.sh /usr/local/bin/sha2lato-entrypoint
 RUN chmod 0755 /usr/local/bin/sha2lato-entrypoint
 
+# ── Version stamp ──────────────────────────────────────────────────────────
+# CI passes the release version (1.2.3) or sha-<short> for non-release builds
+# (see docs/versioning.md). The default covers local builds.
+ARG SHA2LATO_VERSION=dev
+LABEL org.opencontainers.image.version=$SHA2LATO_VERSION
+ENV SHA2LATO_VERSION=$SHA2LATO_VERSION
+
 # ── Build-time smoke ───────────────────────────────────────────────────────
 # The npm-layer pruning is only safe while every baked CLI still starts; fail
 # the build (weekly rebuild included) instead of shipping a broken tool.

@@ -52,6 +52,7 @@ Grammar and behavior: [usage.md → Workflow pack + extras](usage.md#workflow-pa
 | actionlint | [rhysd/actionlint](https://github.com/rhysd/actionlint) | same | same |
 | Forgejo job image | [node:24-bookworm](https://github.com/nodejs/docker-node) (Docker Official) | digest in `.forgejo/workflows/ci.yml` (+ `runner-check.yml`) | manual digest bump |
 | GitHub Actions | [actions/*](https://github.com/actions), [docker/*](https://github.com/docker) | pinned tags in `.github/workflows/` | Renovate (pinDigests) |
+| Image releases | [googleapis/release-please-action](https://github.com/googleapis/release-please-action) | pinned tag in `.github/workflows/release.yml` | Renovate (pinDigests) — scheme + bootstrap: [versioning.md](versioning.md) |
 
 ## Host-level
 

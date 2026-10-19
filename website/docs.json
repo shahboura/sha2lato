@@ -37,7 +37,7 @@
     {
       "group": "Operate",
       "icon": "wrench",
-      "pages": ["ci-cd", "website", "github-runner"]
+      "pages": ["ci-cd", "versioning", "website", "github-runner"]
     },
     {
       "group": "Reference",
@@ -53,6 +53,7 @@
     { "source": "/docs/configuration", "destination": "/configuration", "permanent": true },
     { "source": "/docs/secrets", "destination": "/secrets", "permanent": true },
     { "source": "/docs/ci-cd", "destination": "/ci-cd", "permanent": true },
+    { "source": "/docs/versioning", "destination": "/versioning", "permanent": true },
     { "source": "/docs/upstreams", "destination": "/upstreams", "permanent": true },
     { "source": "/docs/commands", "destination": "/commands", "permanent": true },
     { "source": "/docs/usage", "destination": "/usage", "permanent": true },
