@@ -52,7 +52,7 @@ flowchart LR
 5. **Invite the bot**: `docker compose -f compose/docker-compose.yml exec agent kimaki bot install-url` → open the URL → authorize → `docker compose restart agent`
 6. In Discord: run `/login` to connect a model, then just talk to your agent. Tell it to `git clone` a repo into `/data/projects/…` and add it as a project — a new channel appears.
 
-Full walkthroughs: [docs/](docs/README.md).
+Full walkthroughs: [docs/](docs/README.md) — or read the rendered site at **https://sha2lato.elkodr.com** (upstream's live instance; every fork can publish its own — [docs/website.md](docs/website.md)).
 
 ## Documentation
 

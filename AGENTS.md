@@ -55,8 +55,9 @@ volume names), secrets + age overlay, GitHub + Forgejo CI (multi-arch, weekly
 rebuild, fork-safe), host bootstrap/update/configure scripts, and scoped docs.
 A docs website (`website/`, Holocron) renders from the same `README.md` +
 `docs/*.md` and deploys to Cloudflare Workers when the CF secrets are set
-(optional, fork-safe); `docs/commands.md` is the command reference and
-`docs/agent-setup.md` the agent-executable setup runbook.
+(optional, fork-safe; upstream instance live at `sha2lato.elkodr.com`);
+`docs/commands.md` is the command reference and `docs/agent-setup.md` the
+agent-executable setup runbook.
 `AGENT_PACK` uses `pack[@version]` — `agents-opencode` (default; runtime npm
 latest) / `superpowers` (latest git tag) / `none`; exact pins supported.
 `PONYTAIL=1` and `GRAPHIFY=1` default on; `GRAPHIFY_EXTRAS=openai` defaults on
@@ -102,4 +103,4 @@ entry per session here.
   redirect coverage, contrast tokens).
 - **Open:** deploy the rebuilt image; retest `upload-to-discord` on kimaki
   1.2.0; file the drafted kimaki issues (tunnel DNS, upload bug); Forgejo
-  runner leg; set `CLOUDFLARE_*` secrets + first docs-site deploy.
+  runner leg.
