@@ -1,0 +1,75 @@
+/**
+ * sha2lato docs theme — "code dark + run green" (dark-first, light included).
+ *
+ * Mintlify convention: Holocron auto-loads website/global.css from the
+ * project root, after its own globals.css. Tokens are shadcn-style.
+ *
+ * --primary is intentionally NOT set here: docs.json `colors` injects it
+ * with higher specificity — #22C55E in dark mode, a darker green in light
+ * mode. Mintlify semantics: colors.dark applies to light mode; #15803D is
+ * used there because #16A34A (3.3:1 on white) fails WCAG 4.5:1 for text.
+ */
+@reference "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  /* Light mode */
+  --background: #ffffff;
+  --foreground: #0f172a;
+  --card: #ffffff;
+  --card-foreground: #0f172a;
+  --popover: #ffffff;
+  --popover-foreground: #0f172a;
+  --primary-foreground: #ffffff; /* on #15803D = 5.0:1 */
+  --secondary: #f1f5f9;
+  --secondary-foreground: #0f172a;
+  --muted: #f1f5f9;
+  --muted-foreground: #475569; /* 7.5:1 on white */
+  --accent: #f1f5f9;
+  --accent-foreground: #0f172a;
+  --border: #e2e8f0;
+  --border-subtle: #e2e8f0;
+  --input: #e2e8f0;
+  --ring: #64748b; /* 4.8:1 non-text on white (was #94a3b8, 2.56:1) */
+  --sidebar: #f8fafc;
+  --sidebar-foreground: #334155;
+  --sidebar-primary: #0f172a;
+  --sidebar-accent: #f1f5f9;
+  --sidebar-accent-foreground: #0f172a;
+  --sidebar-border: #e2e8f0;
+  --sidebar-ring: #64748b; /* match --ring: 4.8:1 on white */
+  --code-block-background: #f8fafc;
+  --code-block-border: 1px solid var(--border-subtle);
+  --code-block-radius: var(--radius-md);
+  --code-block-padding-x: 12px;
+  --code-block-padding-y: 12px;
+  --weight-heading: 600;
+
+  @variant dark {
+    --background: #0f172a;
+    --foreground: #f8fafc; /* 17:1 on background */
+    --card: #1b2336;
+    --card-foreground: #f8fafc;
+    --popover: #1b2336;
+    --popover-foreground: #f8fafc;
+    --primary-foreground: #0f172a; /* on #22C55E = 7.8:1 */
+    --secondary: #272f42;
+    --secondary-foreground: #f8fafc;
+    --muted: #272f42;
+    --muted-foreground: #94a3b8; /* 6.9:1 on background */
+    --accent: #272f42;
+    --accent-foreground: #f8fafc;
+    --border: #475569;
+    --border-subtle: #334155;
+    --input: #64748b; /* 3.7:1 non-text on bg (was #475569, 2.35:1) */
+    --ring: #64748b;
+    --sidebar: #0f172a;
+    --sidebar-foreground: #cbd5e1;
+    --sidebar-primary: #f8fafc;
+    --sidebar-accent: #272f42;
+    --sidebar-accent-foreground: #f8fafc;
+    --sidebar-border: #334155;
+    --sidebar-ring: #64748b;
+    --code-block-background: #1b2336;
+  }
+}

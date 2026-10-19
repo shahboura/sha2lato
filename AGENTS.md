@@ -5,6 +5,8 @@ ui-ux-pro-max skill in one Docker image, with a DinD sidecar so the agent can
 build and run project images. Multi-arch CI on GitHub + Forgejo, SSH deploys,
 weekly CVE-fresh rebuilds. Public repo (MIT), fork-friendly.
 
+Deploying the box rather than developing it? Point your agent at `docs/agent-setup.md` — a setup guide written to be executed by agents.
+
 ## Conventions for agents working in this repo
 
 - **Line endings + exec bits:** LF everywhere; authored on Windows, runs on
@@ -51,6 +53,10 @@ ui-ux-pro-max + ponytail + graphify + the box tools: critique, tuistory, bun,
 playwright CLI + chromium deps, gh), compose stack (agent + DinD, explicit
 volume names), secrets + age overlay, GitHub + Forgejo CI (multi-arch, weekly
 rebuild, fork-safe), host bootstrap/update/configure scripts, and scoped docs.
+A docs website (`website/`, Holocron) renders from the same `README.md` +
+`docs/*.md` and deploys to Cloudflare Workers when the CF secrets are set
+(optional, fork-safe); `docs/commands.md` is the command reference and
+`docs/agent-setup.md` the agent-executable setup runbook.
 `AGENT_PACK` uses `pack[@version]` — `agents-opencode` (default; runtime npm
 latest) / `superpowers` (latest git tag) / `none`; exact pins supported.
 `PONYTAIL=1` and `GRAPHIFY=1` default on; `GRAPHIFY_EXTRAS=openai` defaults on
@@ -84,6 +90,16 @@ entry per session here.
   Triaged dind noise and switched its healthcheck to `docker version`.
   Baked graphify's `openai` extra; built the repo graph (91 nodes) and added
   the graphify convention above.
+- **2026-10-19 (session 5):** Docs revamp + optional docs website. The Arcane
+  page became a generic compose-UI guide; added `docs/commands.md`
+  (box-verified command reference), `docs/website.md`, and
+  `docs/agent-setup.md` (agent-executable setup runbook, human-readable too);
+  freshness pass (`agents-opencode@3.1.2` examples, MDX-safe autolinks). New
+  Holocron site (`website/`) renders from the same `README.md` + `docs/*.md`,
+  deploys to Cloudflare Workers via fork-safe jobs in **both** CI pipelines;
+  verified locally (build, wrangler dry-run, smoke, lint-sim). Four review
+  lenses; all findings triaged and fixed (range-based change detection,
+  redirect coverage, contrast tokens).
 - **Open:** deploy the rebuilt image; retest `upload-to-discord` on kimaki
   1.2.0; file the drafted kimaki issues (tunnel DNS, upload bug); Forgejo
-  runner leg.
+  runner leg; set `CLOUDFLARE_*` secrets + first docs-site deploy.

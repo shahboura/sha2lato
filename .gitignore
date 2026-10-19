@@ -42,3 +42,7 @@ node_modules/
 .cache/
 tmp/
 graphify-out/
+
+# ── Docs website ─────────────────────────────────────────────────────
+website/dist/
+website/.wrangler/

@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- Terminal prompt: chevron + cursor underscore, run-green on code-dark -->
+  <rect width="32" height="32" rx="7" fill="#0F172A"/>
+  <path d="M10 11l5.5 5-5.5 5" fill="none" stroke="#22C55E" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M18.5 21.5h4.5" stroke="#22C55E" stroke-width="3.2" stroke-linecap="round"/>
+</svg>

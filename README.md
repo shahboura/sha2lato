@@ -12,7 +12,7 @@ Ships as one small repo: **one custom Docker image** (Kimaki + OpenCode 2 + the 
 - 🧠 **The models you already pay for** — run `/login` in Discord and use Claude Pro/Max, ChatGPT, Gemini, or API keys
 - 🐳 **Docker-in-Docker included** — the agent can build **and run** images for Docker-based projects, isolated from the host
 - 🎨 **Design intelligence baked in** — `npm i` a UI and the agent pulls the full ui-ux-pro-max skill suite (styles, palettes, fonts, stack guides)
-- 🧭 **Workflow packs, on by default** — [agents-opencode](https://agnts.elkodr.com) (agent roster + slash commands) ships enabled; one env var switches to [Superpowers](https://github.com/obra/superpowers) or `none` — and pins any version (`agents-opencode@3.0.0`, `superpowers@v7.0.0`)
+- 🧭 **Workflow packs, on by default** — [agents-opencode](https://agnts.elkodr.com) (agent roster + slash commands) ships enabled; one env var switches to [Superpowers](https://github.com/obra/superpowers) or `none` — and pins any version (`agents-opencode@3.1.2`, `superpowers@v7.0.0`)
 - ⚡ **Discipline + code intelligence** — [ponytail](https://github.com/DietrichGebert/ponytail) (minimal-code reviews) and [graphify](https://github.com/Graphify-Labs/graphify) (queryable knowledge graphs of any repo) are on by default and toggleable
 - 🔐 **Self-hosted everything** — your bot identity, your machine, your git hosts (Forgejo, GitHub, or both)
 - 🚀 **CI/CD included** — multi-arch images (`linux/amd64` + `linux/arm64`) published to GHCR and/or your Forgejo registry, deployed over SSH, rebuilt weekly for CVE freshness
@@ -63,11 +63,14 @@ Full walkthroughs: [docs/](docs/README.md).
 | Secrets, SSH keys, fork guide | [docs/secrets.md](docs/secrets.md) |
 | Configuration — every knob in one place | [docs/configuration.md](docs/configuration.md) |
 | CI/CD — both pipelines, registries, deploys | [docs/ci-cd.md](docs/ci-cd.md) |
-| Upstream index — every dependency + how it updates | [docs/upstreams.md](docs/upstreams.md) |
 | Using it from your phone (day 2) | [docs/usage.md](docs/usage.md) |
 | Optional self-hosted GitHub runner | [docs/github-runner.md](docs/github-runner.md) |
-| Running it under a UI (Arcane) | [docs/arcane.md](docs/arcane.md) |
+| Running it under a compose UI (Arcane, Dockge, Portainer, …) | [docs/compose-ui.md](docs/compose-ui.md) |
 | Troubleshooting | [docs/troubleshooting.md](docs/troubleshooting.md) |
+| Upstream index — every dependency + how it updates | [docs/upstreams.md](docs/upstreams.md) |
+| Baked-in tools & commands | [docs/commands.md](docs/commands.md) |
+| Docs website (Holocron → Cloudflare Workers) | [docs/website.md](docs/website.md) |
+| Agent-driven setup (point an agent at it) | [docs/agent-setup.md](docs/agent-setup.md) |
 
 ## Fork it
 
@@ -83,6 +86,10 @@ Everything personal is externalized: no tokens, keys, usernames or hosts live in
 - A Linux host with Docker Engine 25+ (2–4 GB RAM is comfortable) and SSH access
 - A Discord account (the bot is yours — created in 5 minutes, no bot marketplace needed)
 - Optional for fresh machines: Ubuntu/Debian — `deploy/bootstrap-host.sh` handles the rest
+
+## Built with agents-opencode
+
+This project is developed end-to-end with the [agents-opencode](https://github.com/shahboura/agents-opencode) agent framework (MIT): orchestrator, planner, codebase, review, and docs agents, with every change review-gated before commit. See [docs/usage.md → Workflow pack + extras](docs/usage.md#workflow-pack--extras) for running the same workflow in your box.
 
 ## License
 

@@ -2,6 +2,8 @@
 # lint (shellcheck/hadolint/actionlint) → build multi-arch
 # (linux/amd64 + linux/arm64 via QEMU) → publish to the Forgejo container
 # registry → deploy over SSH. Weekly rebuild mirrors rebuild.yml.
+# Plus the docs-website job (build + optional Cloudflare Workers deploy),
+# mirroring .github/workflows/website.yml.
 #
 # ── Reference runner setup (this repo) ──────────────────────────────────────
 # - runs-on: `linux` — change to a label your runner serves (see Forgejo
@@ -209,3 +211,74 @@ jobs:
           ssh -i ~/.ssh/deploy_key -p "$SSH_PORT" \
             -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o BatchMode=yes \
             "$SSH_USER@$SSH_HOST" "cd /opt/sha2lato && ./deploy/update.sh"
+
+  # Docs website (website/): build always when relevant changes land; deploy to
+  # Cloudflare Workers only when CLOUDFLARE_API_TOKEN + CLOUDFLARE_ACCOUNT_ID
+  # repo secrets are set (self-skipping, like the deploy job above). Forgejo has
+  # no per-watch path filters, so relevance is detected from the pushed commits.
+  website:
+    name: website build + deploy
+    needs: [lint]
+    if: github.ref == 'refs/heads/main'
+    runs-on: linux
+    container:
+      # Builds only need node + npm (both in the official node image).
+      image: node:24-bookworm@sha256:3d27e5c11e5786e309ec3e03f93ae536eb36e6e5eb3714d5eb3300a36157add0
+    concurrency:
+      group: website
+      cancel-in-progress: false
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          # Full history: change detection diffs the whole pushed range.
+          fetch-depth: 0
+
+      - name: Detect website-relevant changes
+        id: changes
+        env:
+          # Branch tip before this push; empty on first pushes and some manual
+          # events — treated as "run the build" (fail-open, never a false skip).
+          BEFORE: ${{ github.event.before }}
+        run: |
+          changed=false
+          if [ -n "$BEFORE" ] && [ "$BEFORE" != "0000000000000000000000000000000000000000" ] && git cat-file -e "$BEFORE^{commit}" 2>/dev/null; then
+            if git diff --name-only "$BEFORE" HEAD -- website/ docs/ README.md | grep -q .; then
+              changed=true
+            fi
+          else
+            # No usable range — run the build; it is harmless and keeps the
+            # gate honest.
+            changed=true
+          fi
+          echo "changed=$changed" >> "$GITHUB_OUTPUT"
+          [ "$changed" = "true" ] || echo "No website-relevant changes in this push — skipping website job."
+
+      - name: Install and build the site
+        if: steps.changes.outputs.changed == 'true'
+        working-directory: website
+        run: |
+          npm ci
+          npm run build
+
+      - name: Check deploy configuration
+        if: steps.changes.outputs.changed == 'true'
+        id: check
+        env:
+          TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          if [ -n "$TOKEN" ] && [ -n "$ACCOUNT" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "CLOUDFLARE_API_TOKEN/CLOUDFLARE_ACCOUNT_ID not (fully) configured — skipping website deploy (expected on forks)."
+          fi
+
+      - name: Deploy to Cloudflare Workers
+        if: steps.check.outputs.enabled == 'true'
+        working-directory: website
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: ./node_modules/.bin/wrangler deploy

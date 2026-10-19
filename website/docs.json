@@ -1,0 +1,66 @@
+{
+  "name": "sha2lato",
+  "description": "Self-hosted AI dev team — Kimaki + OpenCode 2 in one box, driven from Discord.",
+  "logo": { "light": "/logo-light.svg", "dark": "/logo-dark.svg" },
+  "favicon": "/favicon.svg",
+  "colors": { "primary": "#22C55E", "dark": "#15803D", "light": "#22C55E" },
+  "appearance": { "default": "system" },
+  "icons": { "library": "lucide" },
+  "fonts": {
+    "family": "IBM Plex Sans",
+    "heading": { "family": "JetBrains Mono", "weight": 600 }
+  },
+  "navbar": {
+    "links": [
+      { "type": "github", "href": "https://github.com/shahboura/sha2lato" }
+    ]
+  },
+  "footer": {
+    "socials": { "github": "https://github.com/shahboura/sha2lato" }
+  },
+  "navigation": [
+    {
+      "group": "Get started",
+      "icon": "rocket",
+      "pages": ["index", "hosting", "discord-bot", "agent-setup", "docs"]
+    },
+    {
+      "group": "Features",
+      "icon": "sparkles",
+      "pages": ["commands", "usage"]
+    },
+    {
+      "group": "Configure",
+      "icon": "sliders-horizontal",
+      "pages": ["secrets", "configuration", "compose-ui"]
+    },
+    {
+      "group": "Operate",
+      "icon": "wrench",
+      "pages": ["ci-cd", "website", "github-runner"]
+    },
+    {
+      "group": "Reference",
+      "icon": "book-open",
+      "pages": ["troubleshooting", "upstreams"]
+    }
+  ],
+  "redirects": [
+    { "source": "/docs/README", "destination": "/docs", "permanent": true },
+    { "source": "/docs/hosting", "destination": "/hosting", "permanent": true },
+    { "source": "/docs/discord-bot", "destination": "/discord-bot", "permanent": true },
+    { "source": "/docs/agent-setup", "destination": "/agent-setup", "permanent": true },
+    { "source": "/docs/configuration", "destination": "/configuration", "permanent": true },
+    { "source": "/docs/secrets", "destination": "/secrets", "permanent": true },
+    { "source": "/docs/ci-cd", "destination": "/ci-cd", "permanent": true },
+    { "source": "/docs/upstreams", "destination": "/upstreams", "permanent": true },
+    { "source": "/docs/commands", "destination": "/commands", "permanent": true },
+    { "source": "/docs/usage", "destination": "/usage", "permanent": true },
+    { "source": "/docs/github-runner", "destination": "/github-runner", "permanent": true },
+    { "source": "/docs/compose-ui", "destination": "/compose-ui", "permanent": true },
+    { "source": "/docs/troubleshooting", "destination": "/troubleshooting", "permanent": true },
+    { "source": "/docs/website", "destination": "/website", "permanent": true },
+    { "source": "/README", "destination": "/docs", "permanent": true },
+    { "source": "/LICENSE", "destination": "https://github.com/shahboura/sha2lato/blob/main/LICENSE", "permanent": true }
+  ]
+}

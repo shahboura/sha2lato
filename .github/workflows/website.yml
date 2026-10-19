@@ -1,0 +1,69 @@
+# Docs website: build website/ (Holocron) and deploy to Cloudflare Workers.
+#
+# Self-skipping: when CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID secrets are
+# not configured (e.g. on forks), the deploy step logs a notice and succeeds
+# without deploying, while the build still runs. Configure both secrets to
+# enable CD — see docs/website.md.
+name: website
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - website/**
+      - docs/**
+      - README.md
+      - .github/workflows/website.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-deploy:
+    runs-on: ubuntu-latest
+    # Never run two deploys at once
+    concurrency:
+      group: website
+      cancel-in-progress: false
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Node.js 24
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: website/package-lock.json
+
+      - name: Install dependencies
+        working-directory: website
+        run: npm ci
+
+      - name: Build the site
+        working-directory: website
+        run: npm run build
+
+      - name: Check deploy configuration
+        id: check
+        env:
+          TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          if [ -n "$TOKEN" ] && [ -n "$ACCOUNT" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::CLOUDFLARE_API_TOKEN/CLOUDFLARE_ACCOUNT_ID not (fully) configured — skipping deploy (expected on forks)."
+          fi
+
+      - name: Deploy to Cloudflare Workers
+        # Main only: a dispatch from a feature branch builds for validation,
+        # but never ships that branch to the production Worker.
+        if: steps.check.outputs.enabled == 'true' && github.ref == 'refs/heads/main'
+        working-directory: website
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: ./node_modules/.bin/wrangler deploy

@@ -45,10 +45,7 @@ Requirements: SSH access to the git host (see [secrets.md](secrets.md)); git pre
 
 ## Feature support (baked tools)
 
-- `/diff` — works via the baked `critique` diff-viewer backend.
-- `kimaki tunnel` — dev servers; keep them alive in named background sessions via `tuistory` (see Tunnels above).
-- Headless screenshots — via the `playwright` CLI; run `playwright install chromium` once per browser version — the binaries land in the `/data` volume cache (survive rebuilds).
-- Also available: `bun`, `gh` (GitHub CLI), and `pnpm`/`yarn` via `corepack`.
+The box ships the full toolset — diff viewer, tunnels, background sessions, headless browser, and more — see [Baked-in tools & commands](commands.md) for the complete reference. Anything there is also runnable yourself with `! <cmd>` in a channel, or `docker compose -f compose/docker-compose.yml exec agent <cmd>` on the host.
 
 ## Access control
 
@@ -80,7 +77,7 @@ One **workflow pack** (mutually exclusive) plus two **extras** (both on by defau
 
 | Setting | Default | What it adds | Best when |
 |---|---|---|---|
-| `AGENT_PACK=agents-opencode` | ✅ default | 10 agent personas (orchestrator, codebase, review, planner, docs, researcher, …), 16 commands, 24 skills — all languages. From npm; `@x.y.z` pins | You want a structured *delivery loop* with named specialists |
+| `AGENT_PACK=agents-opencode` | ✅ default | 10 agent personas (orchestrator, codebase, review, planner, docs, researcher, …), 16 commands, 27 skills — all languages. From npm; `@x.y.z` pins | You want a structured *delivery loop* with named specialists |
 | `AGENT_PACK=superpowers` | — | The [Superpowers](https://github.com/obra/superpowers) methodology: brainstorm → spec → plan → subagent-driven execution → TDD → review. From git; `@v7.0.0` pins | You want plan-first discipline for autonomous work |
 | `AGENT_PACK=none` | — | Nothing extra | Plain OpenCode + the baked design skills |
 | `PONYTAIL=1` | ✅ on | [Ponytail](https://github.com/DietrichGebert/ponytail): minimal-code discipline — injects the "laziest senior dev" ruleset every turn, adds `/ponytail-review`, `/ponytail-audit`, `/ponytail-debt` | Always useful; pairs with either workflow pack |
