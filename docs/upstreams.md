@@ -15,12 +15,13 @@ Every versioned component this box pulls from upstream — what it is, where its
 
 | Component | Upstream | License | Installed via | Version control | Updates how |
 |---|---|---|---|---|---|
-| Base image | [node:24-trixie-slim](https://github.com/nodejs/docker-node) (Docker Official) | MIT | `FROM` | floating tag | weekly rebuild; Renovate |
+| Base image | [node:26-trixie-slim](https://github.com/nodejs/docker-node) (Docker Official) | MIT | `FROM` | floating tag | weekly rebuild; Renovate |
 | kimaki | [remorses/kimaki](https://github.com/remorses/kimaki) | MIT | `npm -g` @latest | `KIMAKI_VERSION` build arg | weekly rebuild (arg can pin) |
 | ui-ux-pro-max CLI | [nextlevelbuilder/ui-ux-pro-max-skill](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill) | MIT | `npm -g` @latest | `UIPRO_VERSION` build arg | weekly rebuild (arg can pin) |
 | critique CLI | [remorses/critique](https://github.com/remorses/critique) | MIT | `npm -g` @latest | `CRITIQUE_VERSION` build arg | weekly rebuild (arg can pin) |
 | tuistory | [remorses/tuistory](https://github.com/remorses/tuistory) | MIT | `npm -g` @latest | `TUISTORY_VERSION` build arg | weekly rebuild (arg can pin) |
 | bun | [oven-sh/bun](https://github.com/oven-sh/bun) | MIT | `npm -g` (official npm dist) | `BUN_VERSION` build arg | weekly rebuild (arg can pin) |
+| corepack | [nodejs/corepack](https://github.com/nodejs/corepack) | MIT | `npm -g` @latest (no longer in Node 26) | floating | weekly rebuild |
 | playwright CLI | [microsoft/playwright](https://github.com/microsoft/playwright) | Apache-2.0 | `npm -g` @latest + `install-deps chromium` | `PLAYWRIGHT_VERSION` build arg | weekly rebuild; browser binaries stay in the volume cache (not the image) |
 | GitHub CLI (gh) | [cli/cli](https://github.com/cli/cli) | MIT | official apt repo | floating | weekly rebuild |
 | OpenCode 2 | [anomalyco/opencode](https://github.com/anomalyco/opencode) | MIT | official install script | unpinned (kimaki requires ≥ 2.0.19) | weekly rebuild |
@@ -70,4 +71,4 @@ Grammar and behavior: [usage.md → Workflow pack + extras](usage.md#workflow-pa
 
 ## Last verified build
 
-2026-10-18, `sha2lato-agent:e2e` (linux/amd64, working tree of this batch): kimaki 1.2.0 · ui-ux-pro-max-cli 2.15.0 · critique 0.4.0 · tuistory 0.12.0 · bun 1.4.3 · playwright 1.64.1 · gh 2.102.0 · graphify 0.9.92 · OpenCode v2.0.32 · python 3.13.5 · docker CLI 29.9.1 · git 2.47.3 — full stack exercised end-to-end in a tokenless sandbox (compose → DinD → entrypoint convergence, tool set, permissions config); the Discord gateway leg runs on deploy of this image. Size ≈ 2.2 GB of content (`du`); `docker images` reports ~3.0 GB (daemon accounting — uncompressed layers/allocations, not extra content).
+2026-10-19, `sha2lato-agent:node26` (linux/amd64, branch `node26-slim`): node 26.12.0 · npm 11.20.0 · corepack 0.36.0 (pnpm 12.14.0 / yarn 1.22.22 via shims) · kimaki 1.2.0 · ui-ux-pro-max-cli 2.15.0 · critique 0.4.0 · tuistory 0.12.0 · bun 1.4.3 · playwright 1.64.1 · gh 2.102.0 · graphify 0.9.92 · OpenCode v2.0.32 · python 3.13.5 · docker CLI 29.9.1 · git 2.47.3 — build + in-image smoke (every tool, `critique --web`, a Chromium screenshot, the shims) and `test/lint-sim.sh` green; the Discord gateway leg runs on deploy of this image. Size ≈ 2.0 GB of content (`du`); `docker images` reports ~2.73 GB (daemon accounting) — 0.69 GB less than the 2026-10-18 image (3.42 GB) after pruning source maps/types and critique's unused 3D deps and making `build-essential` arm64-only.

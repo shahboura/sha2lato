@@ -101,6 +101,16 @@ entry per session here.
   verified locally (build, wrangler dry-run, smoke, lint-sim). Four review
   lenses; all findings triaged and fixed (range-based change detection,
   redirect coverage, contrast tokens).
+- **2026-10-19 (session 6, branch `node26-slim`):** Base image →
+  `node:26-trixie-slim` (Node 26.12.0; LTS on 2026-10-28) and the measured
+  slim-down findings applied: corepack installed from npm (Node 26 no longer
+  ships it), `*.map`/`*.d.ts` pruned in the npm layer, critique's unused
+  3D/WebGPU optional deps removed, `build-essential` arm64-only. Do **not**
+  prune `test` dirs — playwright exports `lib/mcp/test` at runtime — and do
+  not drop the mesa/LLVM chain from `playwright install-deps`: purging it
+  breaks headless Chromium (exit 127). Image 3.42 → 2.73 GB
+  (`docker images`); build + in-image smoke (tools, `critique --web`,
+  Chromium screenshot, pnpm/yarn shims) + `test/lint-sim.sh` green.
 - **Open:** deploy the rebuilt image; retest `upload-to-discord` on kimaki
   1.2.0; file the drafted kimaki issues (tunnel DNS, upload bug); Forgejo
   runner leg.
