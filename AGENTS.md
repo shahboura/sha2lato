@@ -165,6 +165,13 @@ entry per session here.
   be forced to 21 (ESM-only vs CJS); graphify bumped 0.9.92 → 0.9.93 (only
   package drift found — everything else is current; bun 1.4.4 lands with the
   next rebuild since it tracks `latest`).
+- **2026-10-22 (session 10):** Docker Hub mirror fix. A reusable workflow
+  inherits only `GITHUB_TOKEN`, so the mirror's `secrets.DOCKERHUB_*` were
+  always empty: declared both under `build.yml`'s `workflow_call.secrets`
+  (optional) and passed them from `ci.yml` + `rebuild.yml` (no
+  `secrets: inherit` — that would hand the build job the deploy SSH key).
+  Mirror now fails closed on partial config; `workflow_dispatch` of
+  `build.yml` can never receive repo secrets, so manual runs never mirror.
 - **Open:** deploy the rebuilt image; retest `upload-to-discord` on kimaki
   1.2.0; file the drafted kimaki issues (tunnel DNS, upload bug); Forgejo
   runner leg; verify self-hosted critique uploads once `diff.<domain>`
