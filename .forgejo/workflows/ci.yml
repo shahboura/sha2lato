@@ -1,9 +1,9 @@
 # Forgejo Actions CI — runs on your act_runner, mirroring the GitHub pipeline:
-# lint (shellcheck/hadolint/actionlint) → build multi-arch
-# (linux/amd64 + linux/arm64 via QEMU) → publish to the Forgejo container
-# registry → deploy over SSH. Weekly rebuild mirrors rebuild.yml.
-# Plus the docs-website job (build + optional Cloudflare Workers deploy),
-# mirroring .github/workflows/website.yml.
+# lint (shellcheck/hadolint/actionlint) and build multi-arch
+# (linux/amd64 + linux/arm64 via QEMU) in parallel → publish to the Forgejo
+# container registry → deploy over SSH once both pass. Weekly rebuild mirrors
+# rebuild.yml. Plus the docs-website job (build + optional Cloudflare Workers
+# deploy), mirroring .github/workflows/website.yml.
 #
 # ── Reference runner setup (this repo) ──────────────────────────────────────
 # - runs-on: `linux` — change to a label your runner serves (see Forgejo
@@ -76,36 +76,42 @@ jobs:
             if [ ! -x "$f" ]; then echo "ERROR: $f lost its executable bit (git mode 100755 required)"; exit 1; fi
           done
 
+      # The three linters are independent — run them concurrently.
       # Linter images pinned tag@digest (immutable) — same pins as GitHub CI.
-      - name: shellcheck
+      - name: linters (shellcheck, hadolint, actionlint — parallel)
         run: |
-          fail=0
-          for f in agent/entrypoint.sh deploy/*.sh test/lint-sim.sh; do
-            echo "--- $f"
-            cat "$f" | docker run --rm -i \
-              koalaman/shellcheck:v0.11.0@sha256:61862eba1fcf09a484ebcc6feea46f1782532571a34ed51fedf90dd25f925a8d - || fail=1
+          status=0
+          (
+            fail=0
+            for f in agent/entrypoint.sh deploy/*.sh test/*.sh; do
+              echo "--- shellcheck $f"
+              cat "$f" | docker run --rm -i \
+                koalaman/shellcheck:v0.11.0@sha256:61862eba1fcf09a484ebcc6feea46f1782532571a34ed51fedf90dd25f925a8d - || fail=1
+            done
+            exit "$fail"
+          ) & p_shellcheck=$!
+          (
+            docker run --rm -i \
+              hadolint/hadolint:v2.15.1@sha256:32dac94127fd60b7b7e3fbfc65e1383b9b5e25c9bfd7b8536de7a539fe68a12d \
+              < agent/Dockerfile
+          ) & p_hadolint=$!
+          (
+            fail=0
+            for f in .github/workflows/*.yml .forgejo/workflows/*.yml; do
+              echo "--- actionlint $f"
+              cat "$f" | docker run --rm -i \
+                rhysd/actionlint:1.7.12@sha256:b1934ee5f1c509618f2508e6eb47ee0d3520686341fec936f3b79331f9315667 \
+                -stdin-filename "$f" - || fail=1
+            done
+            exit "$fail"
+          ) & p_actionlint=$!
+          for p in "$p_shellcheck" "$p_hadolint" "$p_actionlint"; do
+            wait "$p" || status=1
           done
-          exit $fail
+          exit "$status"
 
-      - name: hadolint
-        run: |
-          docker run --rm -i \
-            hadolint/hadolint:v2.15.1@sha256:32dac94127fd60b7b7e3fbfc65e1383b9b5e25c9bfd7b8536de7a539fe68a12d \
-            < agent/Dockerfile
-
-      - name: actionlint (GitHub + Forgejo workflows)
-        run: |
-          fail=0
-          for f in .github/workflows/*.yml .forgejo/workflows/*.yml; do
-            echo "--- $f"
-            cat "$f" | docker run --rm -i \
-              rhysd/actionlint:1.7.12@sha256:b1934ee5f1c509618f2508e6eb47ee0d3520686341fec936f3b79331f9315667 \
-              -stdin-filename "$f" - || fail=1
-          done
-          exit $fail
-
+  # Independent of lint: runs in parallel, but deploy waits for both.
   build:
-    needs: [lint]
     runs-on: linux
     container:
       image: node:24-bookworm@sha256:3d27e5c11e5786e309ec3e03f93ae536eb36e6e5eb3714d5eb3300a36157add0
@@ -182,7 +188,7 @@ jobs:
 
   deploy:
     name: deploy to host
-    needs: [build]
+    needs: [lint, build]
     if: github.ref == 'refs/heads/main'
     runs-on: linux
     container:
@@ -231,7 +237,8 @@ jobs:
   # no per-watch path filters, so relevance is detected from the pushed commits.
   website:
     name: website build + deploy
-    needs: [lint]
+    # Independent of lint on purpose: the docs build consumes nothing from it
+    # and self-skips its deploy (the deploy job above stays lint-gated).
     if: github.ref == 'refs/heads/main'
     runs-on: linux
     container:

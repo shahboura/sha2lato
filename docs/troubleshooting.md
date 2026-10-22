@@ -44,7 +44,7 @@ docker compose -f compose/docker-compose.yml exec agent kimaki status
 | dind logs `containerd binary not found, starting embedded containerd` and `Running with experimental embedded-containerd mode` | Expected on `docker:29-dind`: the image intentionally ships no separate `containerd` binary, so dockerd runs its embedded containerd in experimental mode. Benign |
 | dind logs `failed check for fsverity support` / `Failed to find nft tool` | Benign upstream startup checks — the host filesystem has no fsverity, and the image has no `nft` binary (dockerd's firewall falls back). No action |
 | dind logs `healthcheck failed … Unavailable … only one connection allowed` | Embedded-containerd's single-client quirk: `docker info` queries containerd and can transiently collide under load. The compose healthcheck uses `docker version` (no containerd query), so container health no longer flaps on it. Build-time `calling snapshotter.Remove is forbidden` / content-store lock warnings are the same experimental-mode noise from BuildKit — harmless, builds complete |
-| QEMU/multi-arch builds hang | arm64 via QEMU is slow — expected. Prefer fewer platforms or a native arm64 host |
+| QEMU/multi-arch builds hang | arm64 via QEMU is slow — expected. GitHub CI builds each arch natively; the Forgejo workflow still emulates arm64. There, prefer fewer platforms or a native arm64 host |
 
 ## Deploys (CI → host)
 

@@ -76,8 +76,10 @@ docker compose -f compose/docker-compose.yml exec agent printenv SHA2LATO_VERSIO
 # or look for the "[entrypoint] sha2lato <version>" line in the logs
 ```
 
-On `:latest` the OCI label reads `latest` (the highest-priority tag rule wins)
-— use `printenv` or the entrypoint line there.
+On GHCR images (built by `build.yml`) the OCI version label always matches
+`printenv SHA2LATO_VERSION`: a release tag (`1.4.2`) or the build stamp
+(`sha-…`) on `:latest`. Forgejo builds still label with the highest-priority
+tag (`latest`), so there prefer `printenv`.
 
 ## Maintainer notes
 

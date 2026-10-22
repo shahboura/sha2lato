@@ -7,11 +7,13 @@ Two pipelines, one goal: build the agent image for **linux/amd64 + linux/arm64**
 | GitHub | `.github/workflows/` | GitHub's free hosted runners (public repo) | GHCR (`ghcr.io/<owner>/sha2lato-agent`) | SSH → `deploy/update.sh` |
 | Forgejo | `.forgejo/workflows/ci.yml` | **your existing act_runner** | your Forgejo container registry | SSH → `deploy/update.sh` |
 
-Both are mirrors of each other: lint → build (multi-arch) → deploy, plus a **weekly rebuild** (Monday 03:17 UTC) that republishes `:latest` with fresh base layers and deploys it, keeping hosts CVE-fresh without code changes. SemVer releases are cut separately — [versioning.md](versioning.md).
+Both run lint + build (multi-arch) + deploy, plus a **weekly rebuild** (Monday 03:17 UTC) that republishes `:latest` with fresh base layers and deploys it, keeping hosts CVE-fresh without code changes. The GitHub pipeline builds each architecture on its own native runner; the Forgejo pipeline builds both on one runner with QEMU (see [runner requirements](#forgejo-runner-requirements)). SemVer releases are cut separately — [versioning.md](versioning.md).
 
 ## GitHub pipeline
 
-- **`ci.yml`** — on push to `main`, version tags (`v*`), manual dispatch: runs `lint` (shellcheck + hadolint + actionlint, in pinned containers), calls the reusable **`build.yml`** (QEMU + buildx → GHCR; tags: `latest`, `sha-…`, and on version tags `X.Y.Z` / `X.Y` / `X`), then calls **`deploy.yml`** (main only).
+- **`ci.yml`** — on push to `main`, version tags (`v*`), manual dispatch: runs **`lint`** (shellcheck + hadolint + actionlint, concurrently, in pinned containers) and the reusable **`build.yml`** **in parallel**, then calls **`deploy.yml`** (main only) once both pass.
+- **`build.yml`** — reusable, native multi-arch → GHCR: a matrix job per architecture (`ubuntu-24.04` / `ubuntu-24.04-arm`, no QEMU) builds and pushes by digest, runs a **smoke test on the pushed image** (arch + version stamp, via the entrypoint, offline), and the `merge` job validates the digests and assembles the multi-arch manifest with the tags: `latest`, `sha-…`, and on version tags `X.Y.Z` / `X.Y` / `X`. A failed smoke test leaves an untagged digest, so an accidentally broken image is never tagged. Serialized per ref (`concurrency: image-publish-…`) so a weekly rebuild and a push can't interleave into a rollback.
+- **Hosted arm64 runners are free on public repos.** A *private* fork needs a paid plan or a self-hosted arm64 runner for the `linux/arm64` leg ([runner reference](https://docs.github.com/en/actions/reference/runners/github-hosted-runners)).
 - **`deploy.yml`** — reusable, **self-skipping**: if `DEPLOY_SSH_HOST` isn't configured it logs a notice and succeeds (forks stay green). Serialized with `concurrency: deploy`.
 - **`release.yml`** — release automation: [release-please](https://github.com/googleapis/release-please) watches `main`, opens a release PR from Conventional Commits, and on merge creates the `vX.Y.Z` tag + GitHub Release. Because `GITHUB_TOKEN`-created tags don't trigger push workflows, it then dispatches `ci.yml` at the tag to publish the semver image tags. Scheme, pinning, bootstrap: [versioning.md](versioning.md).
 - **`website.yml`** — optional docs website: builds `website/` and deploys it to Cloudflare Workers when `CLOUDFLARE_API_TOKEN` + `CLOUDFLARE_ACCOUNT_ID` are set (self-skipping otherwise — forks stay green; [website.md](website.md)).
@@ -22,7 +24,8 @@ Both are mirrors of each other: lint → build (multi-arch) → deploy, plus a *
 
 ## Forgejo pipeline
 
-- On push to `main`, version tags, the weekly cron, and manual dispatch: `lint` → `build` (multi-arch default) → `deploy`. The deploy step has the same self-skipping behavior.
+- On push to `main`, version tags, the weekly cron, and manual dispatch: **`lint` and `build` (multi-arch) run in parallel**, then `deploy` waits for both. Publishing is not lint-gated (same trade-off as GitHub); the host rollout is. The deploy step has the same self-skipping behavior.
+- The Forgejo build emulates arm64 via QEMU on your one runner; GitHub uses native runners (see below). Website: the docs build + Cloudflare deploy job is independent of lint (it self-skips its deploy) and only runs on `main`.
 - **Releases:** push a `vX.Y.Z` tag yourself (release-please runs on GitHub only) — this pipeline builds the semver tags. Scheme + pinning: [versioning.md](versioning.md).
 - **Registry:** your Forgejo instance's built-in container registry. Set the two `forgejo.example.com` placeholders in the workflow to your host, and add repo secrets `REGISTRY_USERNAME` + `REGISTRY_TOKEN` (a Forgejo token with package write access).
 - Override platforms on manual dispatch via the `platforms` input (e.g. `linux/amd64` to skip the heavy QEMU arm64 leg).

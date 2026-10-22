@@ -1,4 +1,10 @@
-# CI: lint → build & publish (multi-arch → GHCR) → deploy over SSH.
+# CI: lint + build & publish (multi-arch → GHCR) → deploy over SSH.
+#
+# `lint` and `build` are independent (the build consumes no lint output), so
+# they run in parallel; `deploy` waits for both, so a lint failure still
+# blocks the rollout. Trade-off: publishing itself is not lint-gated — a
+# lint-failing commit still pushes :latest/:sha-… (only the host rollout is
+# gated). Lint covers shell/Dockerfile/workflow style, not image behaviour.
 #
 # Deploy is skipped automatically when DEPLOY_SSH_* secrets are not set,
 # so forks run build-only with zero configuration (see docs/ci-cd.md).
@@ -30,31 +36,31 @@ jobs:
             fi
           done
 
-      # Linter images are pinned tag@digest (immutable) for supply-chain safety.
+      # The three linters are independent — run them concurrently. Linter
+      # images are pinned tag@digest (immutable) for supply-chain safety.
       # Update procedure: docs/ci-cd.md → "Linter pinning".
-      - name: shellcheck
+      - name: linters (shellcheck, hadolint, actionlint — parallel)
         run: |
           docker run --rm -v "$PWD:/repo" --workdir /repo \
             koalaman/shellcheck:v0.11.0@sha256:61862eba1fcf09a484ebcc6feea46f1782532571a34ed51fedf90dd25f925a8d \
-            agent/entrypoint.sh deploy/*.sh test/lint-sim.sh
-
-      - name: hadolint
-        run: |
+            agent/entrypoint.sh deploy/*.sh test/*.sh & p_shellcheck=$!
           docker run --rm -i \
             hadolint/hadolint:v2.15.1@sha256:32dac94127fd60b7b7e3fbfc65e1383b9b5e25c9bfd7b8536de7a539fe68a12d \
-            < agent/Dockerfile
-
-      - name: actionlint (GitHub + Forgejo workflows)
-        run: |
+            < agent/Dockerfile & p_hadolint=$!
           docker run --rm -v "$PWD:/repo" --workdir /repo \
             rhysd/actionlint:1.7.12@sha256:b1934ee5f1c509618f2508e6eb47ee0d3520686341fec936f3b79331f9315667 \
-            -color .github/workflows/*.yml
+            -color .github/workflows/*.yml & p_actionlint_gh=$!
           docker run --rm -v "$PWD:/repo" --workdir /repo \
             rhysd/actionlint:1.7.12@sha256:b1934ee5f1c509618f2508e6eb47ee0d3520686341fec936f3b79331f9315667 \
-            -color .forgejo/workflows/*.yml
+            -color .forgejo/workflows/*.yml & p_actionlint_forgejo=$!
+          status=0
+          for p in "$p_shellcheck" "$p_hadolint" "$p_actionlint_gh" "$p_actionlint_forgejo"; do
+            wait "$p" || status=1
+          done
+          exit "$status"
 
+  # Independent of lint: runs in parallel, but deploy waits for both.
   build:
-    needs: [lint]
     uses: ./.github/workflows/build.yml
     permissions:
       contents: read
@@ -62,7 +68,7 @@ jobs:
 
   deploy:
     name: deploy to host
-    needs: [build]
+    needs: [lint, build]
     if: github.ref == 'refs/heads/main'
     uses: ./.github/workflows/deploy.yml
     # Least privilege: only the deploy secrets reach the reusable workflow.

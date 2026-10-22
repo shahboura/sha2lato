@@ -135,6 +135,18 @@ entry per session here.
   releases from Conventional Commits (`X.Y.Z`/`X.Y`/`X` tags; `latest` +
   `sha-…` unchanged), version stamp baked into the image and both pipelines;
   `v1.0.0` tagged and published (`docs/versioning.md`).
+- **2026-10-22 (session 8):** CI parallelism + native multi-arch build.
+  `ci.yml` runs `lint` and `build` in parallel (deploy gated on both; the
+  three linters run concurrently in one step, GitHub + Forgejo). `build.yml`
+  rebuilt as a native amd64/arm64 matrix (`ubuntu-24.04` / `ubuntu-24.04-arm`,
+  no QEMU) → push-by-digest → smoke test of the pushed image (arch + version
+  stamp, `--network none`, hardened) → digest artifacts → `merge` job
+  assembles the manifest (2 regular 64-hex files validated, per-ref publish
+  concurrency). Runner labels pinned to 24.04 because actionlint 1.7.12
+  doesn't know 26.04 yet. OCI labels restored in the build legs; version
+  label == build stamp (docs/versioning corrected). Forgejo mirrors the
+  parallelism but keeps its single-runner QEMU build. `test/lint-sim.sh`
+  green; smoke flags validated against `sha2lato-agent:npm-pr`.
 - **Open:** deploy the rebuilt image; retest `upload-to-discord` on kimaki
   1.2.0; file the drafted kimaki issues (tunnel DNS, upload bug); Forgejo
   runner leg; verify self-hosted critique uploads once `diff.<domain>`
