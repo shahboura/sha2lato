@@ -79,12 +79,12 @@ The image lives in `agent/` and is parameterized for reproducible builds:
 docker build \
   --build-arg KIMAKI_VERSION=1.0.0 \
   --build-arg UIPRO_VERSION=2.15.0 \
-  --build-arg GRAPHIFY_VERSION=0.9.92 \
+  --build-arg GRAPHIFY_VERSION=0.9.93 \
   --build-arg GRAPHIFY_EXTRAS=leiden,mcp \
   -t my-agent agent/
 ```
 
-Defaults: `KIMAKI_VERSION=latest`, `UIPRO_VERSION=latest` (the weekly rebuild refreshes them), `GRAPHIFY_VERSION=0.9.92`; the tool args `CRITIQUE_VERSION`, `TUISTORY_VERSION`, `BUN_VERSION`, `PLAYWRIGHT_VERSION`, `NPM_VERSION` also default to `latest` (the freshness lane — each rebuild re-resolves them; set an exact version for reproducible builds), while `GRAPHIFY_VERSION` is a deliberate pin: graphify feeds the baked usage guide and its venv extras, so majors are bumped by hand, not pulled in by a rebuild. `GRAPHIFY_EXTRAS` defaults to `openai`, which enables graphify's semantic LLM pass with a `DEEPSEEK_API_KEY` or `OPENAI_API_KEY` from the environment; add `leiden` for community detection or `mcp` for the MCP server, or set it empty for core graphify only. Workflow packs are **not** build args — they're runtime config (`AGENT_PACK`), so changing pack or version never needs a rebuild.
+Defaults: `KIMAKI_VERSION=latest`, `UIPRO_VERSION=latest` (the weekly rebuild refreshes them), `GRAPHIFY_VERSION=0.9.93`; the tool args `CRITIQUE_VERSION`, `TUISTORY_VERSION`, `BUN_VERSION`, `PLAYWRIGHT_VERSION`, `NPM_VERSION` also default to `latest` (the freshness lane — each rebuild re-resolves them; set an exact version for reproducible builds), while `GRAPHIFY_VERSION` is a deliberate pin: graphify feeds the baked usage guide and its venv extras, so majors are bumped by hand, not pulled in by a rebuild. `GRAPHIFY_EXTRAS` defaults to `openai`, which enables graphify's semantic LLM pass with a `DEEPSEEK_API_KEY` or `OPENAI_API_KEY` from the environment; add `leiden` for community detection or `mcp` for the MCP server, or set it empty for core graphify only. Workflow packs are **not** build args — they're runtime config (`AGENT_PACK`), so changing pack or version never needs a rebuild.
 
 ## How changes apply
 
