@@ -44,8 +44,10 @@ Deploying the box rather than developing it? Point your agent at `docs/agent-set
   `graphify extract . --backend deepseek --token-budget 10000` and
   `graphify label .` — the token budget is load-bearing: the default 60k
   packs the whole docs corpus into one LLM call and returns thin per-file
-  coverage, which the extractor's shrink guard then refuses to write. If
-  the graph is absent, skip it silently.
+  coverage, which the extractor's shrink guard then refuses to write. The
+  guard still trips on LLM variance (same command, fewer nodes): check the
+  node diff and pass `--allow-partial`, or rebuild into a scratch `--out`
+  dir and swap `graph.json`. If the graph is absent, skip it silently.
 - **Config UX:** convention over configuration — the only required value is
   the bot token; every knob has one override point (`secrets/.env.agent` via
   `deploy/configure.sh`); users never edit compose/Dockerfile.
