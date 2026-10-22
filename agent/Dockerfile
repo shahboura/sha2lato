@@ -104,6 +104,10 @@ RUN set -eux; \
 # test, the playwright/test entrypoint). critique's TUI pulls a separately
 # imported 3D/WebGPU entry (three/planck/bun-webgpu/@dimforge, ~60 MB) that
 # the diff path never loads.
+# Keep npm in THIS transaction: the base image's npm (11.x) runs the reify, so
+# the tools' own install scripts still execute. npm 12 denies dependency
+# scripts by default, so a separate `npm i -g npm@…` first would need
+# --allow-scripts for bun/playwright/… (smoke would catch it, docs explain it).
 RUN npm install -g npm@${NPM_VERSION} \
         kimaki@${KIMAKI_VERSION} ui-ux-pro-max-cli@${UIPRO_VERSION} \
         critique@${CRITIQUE_VERSION} tuistory@${TUISTORY_VERSION} \

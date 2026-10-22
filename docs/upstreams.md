@@ -34,6 +34,8 @@ Every versioned component this box pulls from upstream — what it is, where its
 
 Build-arg mechanics: [configuration.md → Build-time](configuration.md#build-time-custom-image).
 
+> npm 12 (the `latest` lane) tightened defaults for every install inside the box: dependency install scripts are denied unless listed (`--allow-scripts` / `allowScripts`), and git/URL dependencies are blocked (`allow-git` / `allow-remote = none`). Symptoms and opt-ins: [troubleshooting.md](troubleshooting.md). Pin `NPM_VERSION=11.x` to keep the old permissive behavior.
+
 ## Workflow packs + plugins (runtime — no rebuild)
 
 | Item | Upstream | License | Arrives via | Version control | Updates how |
