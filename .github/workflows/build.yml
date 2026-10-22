@@ -77,6 +77,12 @@ jobs:
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
             org.opencontainers.image.revision=${{ github.sha }}
             org.opencontainers.image.version=${{ steps.version.outputs.value }}
+          # Attestations travel with the image. Explicit mode=max: the action
+          # defaults to max on public repos but min on private ones — pin it so
+          # a private fork keeps the same audit trail. Build args are version
+          # strings only (mode=max exposes them), never secrets.
+          provenance: mode=max
+          sbom: true
           # Per-arch cache scopes: never restore an arm64 layer on amd64.
           cache-from: type=gha,scope=${{ matrix.arch }}
           cache-to: type=gha,mode=max,scope=${{ matrix.arch }}
@@ -119,7 +125,7 @@ jobs:
     name: merge manifest
     needs: [build]
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 30
     # Serialize publishing per ref: a weekly rebuild and a push to main must not
     # interleave, or the older run could tag :latest last (a silent rollback).
     concurrency:
@@ -177,3 +183,24 @@ jobs:
           [ ${#tags[@]} -gt 0 ] || { echo "::error::metadata produced no tags"; exit 1; }
           echo "tags: ${tags[*]}"
           docker buildx imagetools create "${tags[@]}" "${sources[@]}"
+
+      # Optional public mirror: copies the same multi-arch manifest to Docker
+      # Hub (attestations included). Self-skipping without both secrets, so
+      # forks stay green — same pattern as deploy.yml.
+      - name: Mirror to Docker Hub
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "$DOCKERHUB_USERNAME" ] || [ -z "$DOCKERHUB_TOKEN" ]; then
+            echo "::notice::DOCKERHUB_USERNAME/DOCKERHUB_TOKEN not set — skipping Docker Hub mirror (expected on forks)."
+            exit 0
+          fi
+          echo "$DOCKERHUB_TOKEN" | docker login docker.io -u "$DOCKERHUB_USERNAME" --password-stdin
+          source="ghcr.io/${{ github.repository_owner }}/sha2lato-agent:${{ steps.meta.outputs.version }}"
+          dh_tags=()
+          while IFS= read -r tag; do
+            dh_tags+=("-t" "docker.io/$DOCKERHUB_USERNAME/sha2lato-agent:${tag##*:}")
+          done < <(jq -r '.tags[]' <<< "$DOCKER_METADATA_OUTPUT_JSON")
+          docker buildx imagetools create "${dh_tags[@]}" "$source"

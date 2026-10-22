@@ -142,7 +142,10 @@ entry per session here.
   no QEMU) → push-by-digest → smoke test of the pushed image (arch + version
   stamp, `--network none`, hardened) → digest artifacts → `merge` job
   assembles the manifest (2 regular 64-hex files validated, per-ref publish
-  concurrency). Runner labels pinned to 24.04 because actionlint 1.7.12
+  concurrency). Attestations pinned explicitly (`provenance: mode=max` +
+  `sbom: true`; the action already defaults to max on public repos, min on
+  private). Optional Docker Hub mirror in the merge job, self-skipping
+  without the `DOCKERHUB_*` secrets. Runner labels pinned to 24.04 because actionlint 1.7.12
   doesn't know 26.04 yet. OCI labels restored in the build legs; version
   label == build stamp (docs/versioning corrected). Forgejo mirrors the
   parallelism but keeps its single-runner QEMU build. `test/lint-sim.sh`
