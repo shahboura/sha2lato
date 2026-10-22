@@ -47,7 +47,7 @@ echo 'docker daemon: OK'
 fail=0
 
 echo '--- shellcheck via stdin (same set as the CI lint jobs) ---'
-for f in agent/entrypoint.sh deploy/*.sh test/lint-sim.sh; do
+for f in agent/entrypoint.sh deploy/*.sh test/*.sh; do
   echo "checking $f"
   if ! cat "$f" | docker run --rm -i koalaman/shellcheck:v0.11.0@sha256:61862eba1fcf09a484ebcc6feea46f1782532571a34ed51fedf90dd25f925a8d -; then
     fail=1

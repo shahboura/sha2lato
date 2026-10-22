@@ -22,13 +22,17 @@ The runner registers itself as `sha2lato-github-runner` with labels `sha2lato,li
 
 ## How this repo's workflows use it
 
-The GitHub pipeline doesn't pin itself to your runner by default (hosted runners are the zero-config path). To route builds to your runner instead, edit `.github/workflows/build.yml`:
+The GitHub pipeline doesn't pin itself to your runner by default (hosted runners are the zero-config path). Two jobs would need editing:
 
 ```yaml
 jobs:
   build:
-    runs-on: [self-hosted, sha2lato]   # was: ubuntu-latest
+    runs-on: [self-hosted, sha2lato]   # was: ${{ matrix.runner }}
+  merge:
+    runs-on: [self-hosted, sha2lato]   # was: ubuntu-24.04
 ```
+
+A single x86_64 runner serves only the `linux/amd64` leg: the `linux/arm64` leg then fails in buildx unless the host has binfmt/QEMU registered (re-add `docker/setup-qemu-action` for that, at emulation speed). For both arches natively, add an arm64 runner and point the matrix's `linux/arm64` entry at its label instead. The `merge` job only needs registry access — it can stay on a hosted runner.
 
 The runner service mounts the host Docker socket so jobs using `docker` (like this pipeline's lint+build) work — same trust model as your Forgejo build runner: treat it as a personal, single-tenant build machine.
 

@@ -1,19 +1,23 @@
-# Reusable build workflow: multi-arch agent image → GHCR.
+# Reusable build workflow: native multi-arch agent image → GHCR.
 #
 # Called by:
 #   ci.yml      — build + publish on every push to main / version tag
 #   rebuild.yml — weekly CVE-freshness rebuild
 #
 # Can also be dispatched manually from the Actions tab.
+#
+# Each arch builds on its own native runner (no QEMU emulation) and is pushed
+# by digest; the `merge` job assembles the multi-arch manifest and applies the
+# tags. A smoke run of the pushed image gates the manifest, so a broken image
+# is never tagged. Pattern: docs.docker.com/build/ci/github-actions/multi-platform
+#
+# Runner labels are pinned OS versions (not `-latest`) so a silent image
+# migration can't change the build environment; bump them by hand. `26.04`
+# images exist upstream but actionlint 1.7.12 doesn't know those labels yet.
 name: build
 
 on:
   workflow_call:
-    inputs:
-      platforms:
-        description: Target platforms for buildx
-        type: string
-        default: linux/amd64,linux/arm64
   workflow_dispatch:
 
 permissions:
@@ -22,14 +26,21 @@ permissions:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: linux/amd64
+            runner: ubuntu-24.04
+            arch: amd64
+          - platform: linux/arm64
+            runner: ubuntu-24.04-arm
+            arch: arm64
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
     steps:
       - name: Checkout
         uses: actions/checkout@v5
-
-      - name: Set up QEMU (arm64 emulation)
-        if: contains(inputs.platforms || 'linux/amd64,linux/arm64', 'arm64')
-        uses: docker/setup-qemu-action@v3
 
       - name: Set up Buildx
         uses: docker/setup-buildx-action@v3
@@ -52,6 +63,89 @@ jobs:
             echo "value=sha-$(git rev-parse --short=7 HEAD)" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Build and push by digest
+        id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: agent
+          platforms: ${{ matrix.platform }}
+          outputs: type=image,name=ghcr.io/${{ github.repository_owner }}/sha2lato-agent,push-by-digest=true,name-canonical=true,push=true
+          build-args: SHA2LATO_VERSION=${{ steps.version.outputs.value }}
+          # OCI metadata: keeps the image traceable to its commit. The version
+          # label always equals the build stamp (see docs/versioning.md).
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.version=${{ steps.version.outputs.value }}
+          # Per-arch cache scopes: never restore an arm64 layer on amd64.
+          cache-from: type=gha,scope=${{ matrix.arch }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.arch }}
+
+      # Runs the published artifact on its native arch (not the local build):
+      # catches a wrong-arch manifest, a lost version stamp, or a broken
+      # entrypoint. --network none + AGENT_PACK=none keep the run offline.
+      - name: Smoke test the pushed image
+        env:
+          IMAGE: ghcr.io/${{ github.repository_owner }}/sha2lato-agent@${{ steps.build.outputs.digest }}
+          EXPECTED_VERSION: ${{ steps.version.outputs.value }}
+        run: |
+          set -euo pipefail
+          docker pull "$IMAGE"
+          arch=$(docker image inspect -f '{{.Architecture}}' "$IMAGE")
+          [ "$arch" = "${{ matrix.arch }}" ] || { echo "::error::arch $arch, expected ${{ matrix.arch }}"; exit 1; }
+          # Last line only: the entrypoint logs before exec'ing the command.
+          version=$(docker run --rm --network none --pids-limit 512 --cap-drop ALL \
+            --security-opt no-new-privileges:true -e AGENT_PACK=none \
+            "$IMAGE" printenv SHA2LATO_VERSION | tail -1)
+          [ "$version" = "$EXPECTED_VERSION" ] || { echo "::error::version stamp '$version', expected '$EXPECTED_VERSION'"; exit 1; }
+          echo "smoke ok: $arch $version"
+
+      - name: Export digest
+        env:
+          DIGEST: ${{ steps.build.outputs.digest }}
+        run: |
+          mkdir -p /tmp/digests
+          touch "/tmp/digests/${DIGEST#sha256:}"
+
+      - name: Upload digest
+        uses: actions/upload-artifact@v7
+        with:
+          name: digest-${{ matrix.arch }}
+          path: /tmp/digests/*
+          if-no-files-found: error
+          retention-days: 1
+
+  merge:
+    name: merge manifest
+    needs: [build]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    # Serialize publishing per ref: a weekly rebuild and a push to main must not
+    # interleave, or the older run could tag :latest last (a silent rollback).
+    concurrency:
+      group: image-publish-${{ github.ref }}
+      cancel-in-progress: false
+    # Merging needs the registry credential and nothing else.
+    permissions:
+      packages: write
+    steps:
+      - name: Download digests
+        uses: actions/download-artifact@v8
+        with:
+          path: /tmp/digests
+          pattern: digest-*
+          merge-multiple: true
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
       - name: Docker metadata
         id: meta
         uses: docker/metadata-action@v5
@@ -64,14 +158,22 @@ jobs:
             type=semver,pattern={{major}}.{{minor}}
             type=semver,pattern={{major}}
 
-      - name: Build and push
-        uses: docker/build-push-action@v6
-        with:
-          context: agent
-          platforms: ${{ inputs.platforms || 'linux/amd64,linux/arm64' }}
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          build-args: SHA2LATO_VERSION=${{ steps.version.outputs.value }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+      - name: Create multi-arch manifest
+        working-directory: /tmp/digests
+        run: |
+          set -euo pipefail
+          sources=()
+          for f in *; do
+            [ -f "$f" ] && [ ! -L "$f" ] || { echo "::error::not a regular file: $f"; exit 1; }
+            case "$f" in *[!0-9a-f]*) echo "::error::not a digest filename: $f"; exit 1 ;; esac
+            [ ${#f} -eq 64 ] || { echo "::error::bad digest length: $f"; exit 1; }
+            sources+=("ghcr.io/${{ github.repository_owner }}/sha2lato-agent@sha256:$f")
+          done
+          # One digest per matrix leg (2 today) — update if the matrix changes.
+          [ ${#sources[@]} -eq 2 ] || { echo "::error::expected 2 arch digests, found ${#sources[@]}"; exit 1; }
+          tags=()
+          while IFS= read -r tag; do tags+=("-t" "$tag"); done \
+            < <(jq -r '.tags[]' <<< "$DOCKER_METADATA_OUTPUT_JSON")
+          [ ${#tags[@]} -gt 0 ] || { echo "::error::metadata produced no tags"; exit 1; }
+          echo "tags: ${tags[*]}"
+          docker buildx imagetools create "${tags[@]}" "${sources[@]}"
