@@ -41,8 +41,11 @@ Deploying the box rather than developing it? Point your agent at `docs/agent-set
 - **Knowledge graph:** when `graphify-out/graph.json` exists, use
   `graphify query` / `path` / `explain` before broad grepping. After code
   edits run `graphify update .` (free); after doc edits run
-  `graphify extract . --backend deepseek` and `graphify label .`. If the
-  graph is absent, skip it silently.
+  `graphify extract . --backend deepseek --token-budget 10000` and
+  `graphify label .` — the token budget is load-bearing: the default 60k
+  packs the whole docs corpus into one LLM call and returns thin per-file
+  coverage, which the extractor's shrink guard then refuses to write. If
+  the graph is absent, skip it silently.
 - **Config UX:** convention over configuration — the only required value is
   the bot token; every knob has one override point (`secrets/.env.agent` via
   `deploy/configure.sh`); users never edit compose/Dockerfile.
