@@ -26,6 +26,10 @@ FROM node:26-trixie-slim
 
 ARG DEBIAN_FRONTEND=noninteractive
 # Pin for reproducible builds; "latest" by design (weekly rebuilds refresh)
+# npm ships bundled with node:26 and trails npm latest — refresh it here so
+# `npm i -g` inside the box (and tool warnings) don't nag; an in-container
+# upgrade would be lost on recreate.
+ARG NPM_VERSION=latest
 ARG KIMAKI_VERSION=latest
 ARG UIPRO_VERSION=latest
 ARG CRITIQUE_VERSION=latest
@@ -81,6 +85,8 @@ RUN set -eux; \
 
 # ── Kimaki + agent tooling (runtime substrate) ─────────────────────────────
 # Workflow packs are fetched by the entrypoint at runtime, not baked here.
+# npm:      base-image npm is stale by design (Node pins its bundled version);
+#           NPM_VERSION refreshes it, "latest" by default.
 # critique: diff-viewer backend for kimaki /diff (docs: "not bundled")
 # tuistory: named background sessions (the kimaki tunnel pattern)
 # bun:      bun-lockfile projects, bunx-based tools (profano, ...)
@@ -98,7 +104,8 @@ RUN set -eux; \
 # test, the playwright/test entrypoint). critique's TUI pulls a separately
 # imported 3D/WebGPU entry (three/planck/bun-webgpu/@dimforge, ~60 MB) that
 # the diff path never loads.
-RUN npm install -g kimaki@${KIMAKI_VERSION} ui-ux-pro-max-cli@${UIPRO_VERSION} \
+RUN npm install -g npm@${NPM_VERSION} \
+        kimaki@${KIMAKI_VERSION} ui-ux-pro-max-cli@${UIPRO_VERSION} \
         critique@${CRITIQUE_VERSION} tuistory@${TUISTORY_VERSION} \
         bun@${BUN_VERSION} playwright@${PLAYWRIGHT_VERSION} corepack@latest \
     && npm cache clean --force \

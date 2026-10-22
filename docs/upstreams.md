@@ -7,7 +7,7 @@ Every versioned component this box pulls from upstream — what it is, where its
 | Lane | Covers | What you do |
 |---|---|---|
 | **Automatic** | CI actions + pinned Docker images | merge Renovate PRs (Mondays) |
-| **Scheduled** | Floating build-time deps: base image, apt, kimaki, ui-ux-pro-max, critique, tuistory, bun, playwright, gh, OpenCode, Docker CLI | nothing on CI-deployed hosts — the weekly rebuild republishes `:latest` **and deploys it** (GitHub `rebuild.yml`; Forgejo: cron in `.forgejo/workflows/ci.yml`). No CI deploy: `./deploy/update.sh` ([compose-UI users](compose-ui.md): **Redeploy**) |
+| **Scheduled** | Floating build-time deps: base image, npm, apt, kimaki, ui-ux-pro-max, critique, tuistory, bun, playwright, gh, OpenCode, Docker CLI | nothing on CI-deployed hosts — the weekly rebuild republishes `:latest` **and deploys it** (GitHub `rebuild.yml`; Forgejo: cron in `.forgejo/workflows/ci.yml`). No CI deploy: `./deploy/update.sh` ([compose-UI users](compose-ui.md): **Redeploy**) |
 | **Manual** | Deliberate pins: graphify CLI, ponytail default, linter + Forgejo job-image digests | bump the pin — workflow pins are commit-only; image pins also need a rebuild/redeploy |
 | **Runtime** | Workflow packs + ponytail plugin — no rebuild at all | edit `AGENT_PACK` / `PONYTAIL_SPEC` in `secrets/.env.agent` (or your compose UI's `.env` editor) + `up -d` to recreate — env files are re-read on recreate, not on a plain restart ([compose-UI users](compose-ui.md): **Redeploy**) |
 
@@ -16,6 +16,7 @@ Every versioned component this box pulls from upstream — what it is, where its
 | Component | Upstream | License | Installed via | Version control | Updates how |
 |---|---|---|---|---|---|
 | Base image | [node:26-trixie-slim](https://github.com/nodejs/docker-node) (Docker Official) | MIT | `FROM` | floating tag | weekly rebuild; Renovate |
+| npm | [npm/cli](https://github.com/npm/cli) | Artistic-2.0 | `npm -g` @latest (refreshes the base image's bundled npm) | `NPM_VERSION` build arg | weekly rebuild (arg can pin) |
 | kimaki | [remorses/kimaki](https://github.com/remorses/kimaki) | MIT | `npm -g` @latest | `KIMAKI_VERSION` build arg | weekly rebuild (arg can pin) |
 | ui-ux-pro-max CLI | [nextlevelbuilder/ui-ux-pro-max-skill](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill) | MIT | `npm -g` @latest | `UIPRO_VERSION` build arg | weekly rebuild (arg can pin) |
 | critique CLI | [remorses/critique](https://github.com/remorses/critique) | MIT | `npm -g` @latest | `CRITIQUE_VERSION` build arg | weekly rebuild (arg can pin) |
