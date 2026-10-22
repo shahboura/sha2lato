@@ -64,9 +64,11 @@ else
 fi
 
 echo '--- actionlint via stdin (all workflows) ---'
+# -ignore: actionlint 1.7.12 predates GitHub's Ubuntu 26.04 runner labels.
+ignore='label "ubuntu-26\.04(-arm)?" is unknown'
 for f in .github/workflows/*.yml .forgejo/workflows/*.yml; do
   echo "checking $f"
-  if ! cat "$f" | docker run --rm -i rhysd/actionlint:1.7.12@sha256:b1934ee5f1c509618f2508e6eb47ee0d3520686341fec936f3b79331f9315667 -stdin-filename "$f" -; then
+  if ! cat "$f" | docker run --rm -i rhysd/actionlint:1.7.12@sha256:b1934ee5f1c509618f2508e6eb47ee0d3520686341fec936f3b79331f9315667 -ignore "$ignore" -stdin-filename "$f" -; then
     fail=1
   fi
 done

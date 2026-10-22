@@ -12,14 +12,14 @@ Both run lint + build (multi-arch) + deploy, plus a **weekly rebuild** (Monday 0
 ## GitHub pipeline
 
 - **`ci.yml`** — on push to `main`, version tags (`v*`), manual dispatch: runs **`lint`** (shellcheck + hadolint + actionlint, concurrently, in pinned containers) and the reusable **`build.yml`** **in parallel**, then calls **`deploy.yml`** (main only) once both pass.
-- **`build.yml`** — reusable, native multi-arch → GHCR: a matrix job per architecture (`ubuntu-24.04` / `ubuntu-24.04-arm`, no QEMU) builds and pushes by digest **with `mode=max` provenance and SBOM attestations**, runs a **smoke test on the pushed image** (arch + version stamp, via the entrypoint, offline), and the `merge` job validates the digests and assembles the multi-arch manifest with the tags: `latest`, `sha-…`, and on version tags `X.Y.Z` / `X.Y` / `X`. A failed smoke test leaves an untagged digest, so an accidentally broken image is never tagged. Serialized per ref (`concurrency: image-publish-…`) so a weekly rebuild and a push can't interleave into a rollback.
+- **`build.yml`** — reusable, native multi-arch → GHCR: a matrix job per architecture (`ubuntu-26.04` / `ubuntu-26.04-arm`, no QEMU) builds and pushes by digest **with `mode=max` provenance and SBOM attestations**, runs a **smoke test on the pushed image** (arch + version stamp, via the entrypoint, offline), and the `merge` job validates the digests and assembles the multi-arch manifest with the tags: `latest`, `sha-…`, and on version tags `X.Y.Z` / `X.Y` / `X`. A failed smoke test leaves an untagged digest, so an accidentally broken image is never tagged. Serialized per ref (`concurrency: image-publish-…`) so a weekly rebuild and a push can't interleave into a rollback.
 - **Hosted arm64 runners are free on public repos.** A *private* fork needs a paid plan or a self-hosted arm64 runner for the `linux/arm64` leg ([runner reference](https://docs.github.com/en/actions/reference/runners/github-hosted-runners)).
 - **`deploy.yml`** — reusable, **self-skipping**: if `DEPLOY_SSH_HOST` isn't configured it logs a notice and succeeds (forks stay green). Serialized with `concurrency: deploy`.
 - **Docker Hub mirror (optional)** — after the manifest is created, `merge` copies the same tag set to `docker.io/<DOCKERHUB_USERNAME>/sha2lato-agent` when both `DOCKERHUB_USERNAME` + `DOCKERHUB_TOKEN` repo secrets are set (self-skipping otherwise, so forks stay green). Docker Hub applies pull rate limits to anonymous consumers — GHCR does not.
 - **`release.yml`** — release automation: [release-please](https://github.com/googleapis/release-please) watches `main`, opens a release PR from Conventional Commits, and on merge creates the `vX.Y.Z` tag + GitHub Release. Because `GITHUB_TOKEN`-created tags don't trigger push workflows, it then dispatches `ci.yml` at the tag to publish the semver image tags. Scheme, pinning, bootstrap: [versioning.md](versioning.md).
 - **`website.yml`** — optional docs website: builds `website/` and deploys it to Cloudflare Workers when `CLOUDFLARE_API_TOKEN` + `CLOUDFLARE_ACCOUNT_ID` are set (self-skipping otherwise — forks stay green; [website.md](website.md)).
 - **`rebuild.yml`** — the weekly cron: build + deploy, no code change required.
-- **`renovate.json`** — Renovate opens PRs for base-image and action updates (`pinDigests` on).
+- **`renovate.json`** — Renovate opens PRs for base-image and action updates and SHA-pins Actions (`helpers:pinGitHubActionDigests`). Linter images referenced inside `run:` blocks are not tracked — see "Linter pinning".
 
 **Secrets to set** (repo → Settings → Secrets and variables → Actions): `DEPLOY_SSH_HOST`, `DEPLOY_SSH_USER`, `DEPLOY_SSH_KEY`, optionally `DEPLOY_SSH_PORT`. `GITHUB_TOKEN` is automatic. Optional: `DOCKERHUB_USERNAME` + `DOCKERHUB_TOKEN` enable the Docker Hub mirror. See [secrets.md](secrets.md).
 
@@ -30,6 +30,7 @@ Both run lint + build (multi-arch) + deploy, plus a **weekly rebuild** (Monday 0
 - **Releases:** push a `vX.Y.Z` tag yourself (release-please runs on GitHub only) — this pipeline builds the semver tags. Scheme + pinning: [versioning.md](versioning.md).
 - **Registry:** your Forgejo instance's built-in container registry. Set the two `forgejo.example.com` placeholders in the workflow to your host, and add repo secrets `REGISTRY_USERNAME` + `REGISTRY_TOKEN` (a Forgejo token with package write access).
 - Override platforms on manual dispatch via the `platforms` input (e.g. `linux/amd64` to skip the heavy QEMU arm64 leg).
+- **Action versions:** this pipeline stays one major behind GitHub on purpose — the newer action majors (checkout v7, docker/* v4–v7) run on Node 24, which needs an `act_runner` build with Node 24 support. Upgrade here once your runner has it; until then, keep the older pins. The GitHub pipeline also has no Docker Hub mirror and no per-arch smoke gate.
 
 ### Forgejo runner requirements
 

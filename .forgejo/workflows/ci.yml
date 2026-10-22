@@ -96,12 +96,14 @@ jobs:
               < agent/Dockerfile
           ) & p_hadolint=$!
           (
+            # -ignore: actionlint 1.7.12 doesn't know the Ubuntu 26.04 labels.
             fail=0
+            ignore='label "ubuntu-26\.04(-arm)?" is unknown'
             for f in .github/workflows/*.yml .forgejo/workflows/*.yml; do
               echo "--- actionlint $f"
               cat "$f" | docker run --rm -i \
                 rhysd/actionlint:1.7.12@sha256:b1934ee5f1c509618f2508e6eb47ee0d3520686341fec936f3b79331f9315667 \
-                -stdin-filename "$f" - || fail=1
+                -ignore "$ignore" -stdin-filename "$f" - || fail=1
             done
             exit "$fail"
           ) & p_actionlint=$!

@@ -138,16 +138,20 @@ entry per session here.
 - **2026-10-22 (session 8):** CI parallelism + native multi-arch build.
   `ci.yml` runs `lint` and `build` in parallel (deploy gated on both; the
   three linters run concurrently in one step, GitHub + Forgejo). `build.yml`
-  rebuilt as a native amd64/arm64 matrix (`ubuntu-24.04` / `ubuntu-24.04-arm`,
+  rebuilt as a native amd64/arm64 matrix (`ubuntu-26.04` / `ubuntu-26.04-arm`,
   no QEMU) → push-by-digest → smoke test of the pushed image (arch + version
   stamp, `--network none`, hardened) → digest artifacts → `merge` job
   assembles the manifest (2 regular 64-hex files validated, per-ref publish
   concurrency). Attestations pinned explicitly (`provenance: mode=max` +
   `sbom: true`; the action already defaults to max on public repos, min on
   private). Optional Docker Hub mirror in the merge job, self-skipping
-  without the `DOCKERHUB_*` secrets. Runner labels pinned to 24.04 because actionlint 1.7.12
-  doesn't know 26.04 yet. OCI labels restored in the build legs; version
-  label == build stamp (docs/versioning corrected). Forgejo mirrors the
+  without the `DOCKERHUB_*` secrets. Runner labels pinned to 26.04; the lint
+  jobs pass actionlint an `-ignore` for those labels (1.7.12 predates them).
+  OCI labels restored in the build legs; version
+  label == build stamp (docs/versioning corrected). GitHub action majors bumped
+  (checkout v7, login/buildx v4, metadata v6, build-push v7) and Renovate now
+  SHA-pins Actions; Forgejo stays on the older action majors until its
+  act_runner supports Node 24. Forgejo mirrors the
   parallelism but keeps its single-runner QEMU build. `test/lint-sim.sh`
   green; smoke flags validated against `sha2lato-agent:npm-pr`.
 - **Open:** deploy the rebuilt image; retest `upload-to-discord` on kimaki
