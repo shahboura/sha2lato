@@ -53,6 +53,7 @@ The agent engine Kimaki drives. The TUI runs as `docker compose -f compose/docke
 | Command | What it does |
 |---|---|
 | `graphify extract . --code-only` | Build the graph, local AST only (no API key); for the semantic LLM pass add `--backend deepseek` (or your configured key) |
+| `graphify extract . --backend deepseek --token-budget 10000` | Semantic pass with small chunks: the default 60k budget packs the whole docs corpus into one call and extracts thin per-file graphs |
 | `graphify update .` | Refresh after code edits (no LLM) |
 | `graphify query "how does auth work"` | Answer by traversing the graph |
 | `graphify path "A" "B"` / `explain "X"` / `affected "X"` / `god-nodes` | Shortest path / node + neighbors / reverse impact / connected hubs |
