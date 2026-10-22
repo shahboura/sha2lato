@@ -24,7 +24,7 @@ permissions:
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     # Never run two deploys at once (ci.yml and rebuild.yml share this group)
     concurrency:
       group: deploy

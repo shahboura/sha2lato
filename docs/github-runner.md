@@ -29,7 +29,7 @@ jobs:
   build:
     runs-on: [self-hosted, sha2lato]   # was: ${{ matrix.runner }}
   merge:
-    runs-on: [self-hosted, sha2lato]   # was: ubuntu-24.04
+    runs-on: [self-hosted, sha2lato]   # was: ubuntu-26.04
 ```
 
 A single x86_64 runner serves only the `linux/amd64` leg: the `linux/arm64` leg then fails in buildx unless the host has binfmt/QEMU registered (re-add `docker/setup-qemu-action` for that, at emulation speed). For both arches natively, add an arm64 runner and point the matrix's `linux/arm64` entry at its label instead. The `merge` job only needs registry access — it can stay on a hosted runner.
