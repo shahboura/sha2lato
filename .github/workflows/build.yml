@@ -18,6 +18,15 @@ name: build
 
 on:
   workflow_call:
+    # A reusable workflow only inherits GITHUB_TOKEN: every other secret must
+    # be declared here AND passed by each caller (ci.yml, rebuild.yml).
+    # Optional so forks stay green; the mirror step fails closed if exactly
+    # one of the pair is set.
+    secrets:
+      DOCKERHUB_USERNAME:
+        required: false
+      DOCKERHUB_TOKEN:
+        required: false
   workflow_dispatch:
 
 permissions:
@@ -193,9 +202,16 @@ jobs:
           DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
         run: |
           set -euo pipefail
-          if [ -z "$DOCKERHUB_USERNAME" ] || [ -z "$DOCKERHUB_TOKEN" ]; then
-            echo "::notice::DOCKERHUB_USERNAME/DOCKERHUB_TOKEN not set — skipping Docker Hub mirror (expected on forks)."
+          # Reusable workflows only inherit GITHUB_TOKEN — these arrive from the
+          # caller's `secrets:` block (ci.yml / rebuild.yml). workflow_dispatch
+          # cannot supply secrets, so manual runs always skip the mirror.
+          if [ -z "$DOCKERHUB_USERNAME" ] && [ -z "$DOCKERHUB_TOKEN" ]; then
+            echo "::notice::DOCKERHUB_USERNAME/DOCKERHUB_TOKEN not set — skipping Docker Hub mirror (expected on forks and manual dispatches)."
             exit 0
+          fi
+          if [ -z "$DOCKERHUB_USERNAME" ] || [ -z "$DOCKERHUB_TOKEN" ]; then
+            echo "::error::set both DOCKERHUB_USERNAME and DOCKERHUB_TOKEN, or neither — partial config silently skips the mirror."
+            exit 1
           fi
           echo "$DOCKERHUB_TOKEN" | docker login docker.io -u "$DOCKERHUB_USERNAME" --password-stdin
           source="ghcr.io/${{ github.repository_owner }}/sha2lato-agent:${{ steps.meta.outputs.version }}"
