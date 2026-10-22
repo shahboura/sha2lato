@@ -154,6 +154,17 @@ entry per session here.
   act_runner supports Node 24. Forgejo mirrors the
   parallelism but keeps its single-runner QEMU build. `test/lint-sim.sh`
   green; smoke flags validated against `sha2lato-agent:npm-pr`.
+- **2026-10-22 (session 9):** Vulnerability scan + Trivy gate. Trivy on the
+  built image: 2 CRITICAL + 112 HIGH, only 3 fixable (buildx/compose
+  `golang.org/x/net`, buildx `moby/go-archive` — all already at the latest
+  upstream release), 0 fixable Debian OS CVEs; the 111 unfixed are mostly
+  libxml2, openssh-client, python3.13 and util-linux. Docker Scout needs a
+  Docker ID, so the gate uses Trivy 0.76.1 (pinned by digest), per arch,
+  before `merge`: `--severity CRITICAL --ignore-unfixed --exit-code 1` — a
+  failing leg leaves an untagged digest. `file-type@16` under critique can't
+  be forced to 21 (ESM-only vs CJS); graphify bumped 0.9.92 → 0.9.93 (only
+  package drift found — everything else is current; bun 1.4.4 lands with the
+  next rebuild since it tracks `latest`).
 - **2026-10-22 (session 10):** Docker Hub mirror fix. A reusable workflow
   inherits only `GITHUB_TOKEN`, so the mirror's `secrets.DOCKERHUB_*` were
   always empty: declared both under `build.yml`'s `workflow_call.secrets`

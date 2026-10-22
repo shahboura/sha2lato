@@ -115,6 +115,24 @@ jobs:
           [ "$version" = "$EXPECTED_VERSION" ] || { echo "::error::version stamp '$version', expected '$EXPECTED_VERSION'"; exit 1; }
           echo "smoke ok: $arch $version"
 
+      # Vulnerability gate: scans the published artifact before its digest is
+      # handed to `merge`, so a fixable CRITICAL never gets tagged. Trivy uses
+      # the already-pulled local image (docker socket), falling back to the
+      # registry with the job token. --ignore-unfixed keeps this box's
+      # Debian/OpenSSH CVEs without patches from failing every build; raise
+      # the severity to HIGH once the pinned Docker plugins are current.
+      - name: Vulnerability gate (Trivy)
+        env:
+          IMAGE: ghcr.io/${{ github.repository_owner }}/sha2lato-agent@${{ steps.build.outputs.digest }}
+          TRIVY_USERNAME: ${{ github.actor }}
+          TRIVY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+            -e TRIVY_USERNAME -e TRIVY_PASSWORD \
+            aquasec/trivy:0.76.1@sha256:790fd66d1697395d8693d1acaa1ea702406a20f109b6fc7bac8db623eca6c06c \
+            image --scanners vuln --severity CRITICAL --ignore-unfixed \
+            --exit-code 1 --timeout 15m --no-progress "$IMAGE"
+
       - name: Export digest
         env:
           DIGEST: ${{ steps.build.outputs.digest }}
