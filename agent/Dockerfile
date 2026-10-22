@@ -36,7 +36,7 @@ ARG CRITIQUE_VERSION=latest
 ARG TUISTORY_VERSION=latest
 ARG BUN_VERSION=latest
 ARG PLAYWRIGHT_VERSION=latest
-ARG GRAPHIFY_VERSION=0.9.92
+ARG GRAPHIFY_VERSION=0.9.93
 # graphify extras, comma-separated (e.g. "leiden,mcp"). Default openai powers the
 # semantic LLM pass with DEEPSEEK_API_KEY/OPENAI_API_KEY; empty = core only.
 ARG GRAPHIFY_EXTRAS=openai
