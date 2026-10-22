@@ -79,6 +79,7 @@ Graphs are per-checkout in `graphify-out/` (keep it out of git).
 | Command | What it does |
 |---|---|
 | `critique main HEAD --web "Branch changes"` | Publish a web diff, prints the URL |
+| `critique --web "Title" --password <pw>` | Publish a password-protected diff (or set `CRITIQUE_PASSWORD`) |
 | `critique <PR URL> --web` | Review a GitHub PR without checking it out |
 | `critique hunks list` / `hunks add <ids>` / `login <key>` | Selective staging by stable hunk IDs / license key for unlimited links |
 
