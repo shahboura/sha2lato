@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.0](https://github.com/shahboura/sha2lato/compare/v1.1.0...v1.2.0) (2026-10-24)
+
+
+### Features
+
+* **agent:** keep kimaki critique links only with self-hosted critique ([#16](https://github.com/shahboura/sha2lato/issues/16)) ([72cd0b4](https://github.com/shahboura/sha2lato/commit/72cd0b44055c9cd7d701e0f56066287398c6c7e5))
+
 ## [1.1.0](https://github.com/shahboura/sha2lato/compare/v1.0.0...v1.1.0) (2026-10-22)
 
 
