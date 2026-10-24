@@ -152,3 +152,4 @@ flowchart TB
 
 - `./deploy/update.sh` — detects the [deployment mode](configuration.md#deployment-modes) and rebuilds or pulls accordingly (or let CI do it on every push / weekly rebuild).
 - Your sessions, logins, and projects live on the `sha2lato-agent-data` volume — updates never log you out. Projects stay in `/data/projects`.
+- Diff links survive updates too: self-hosted critique keeps published diffs on its own `critique-data` volume (the instance `CRITIQUE_WORKER_URL` points at); links expire after 7 days.

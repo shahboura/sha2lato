@@ -40,6 +40,7 @@ Everything else in the repo is impersonal — fork-safe by design ([secrets.md](
 | `GIT_USER_EMAIL` | `agent@sha2lato.local` | email for agent-made commits |
 | `GIT_SIGN` | empty (off) | `1` = SSH-sign agent commits with `secrets/ssh/signing_key` |
 | `CRITIQUE_WORKER_URL` | empty (→ `https://critique.work`) | https origin of a self-hosted critique instance for `critique --web` and `/diff`, e.g. `https://diff.example.com` |
+| `CRITIQUE_PASSWORD` | empty | password for `critique --web` links (used when `--password` is omitted; needs an https origin) |
 | `SUPERPOWERS_DISABLE_TELEMETRY` | `1` (off) | set `0` to allow the version-only telemetry ping |
 | `KIMAKI_WORKTREES` | empty (off) | `1` = fresh git worktree per session — **leave empty when superpowers is active** |
 | `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GEMINI_API_KEY` | empty | optional model keys; `/login` in Discord is the recommended path |

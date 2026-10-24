@@ -25,7 +25,7 @@ cp secrets/.env.agent.example secrets/.env.agent
 cp compose/.env.example compose/.env
 ```
 
-**`secrets/.env.agent`** — required: `KIMAKI_BOT_TOKEN`. Optional: `MACHINE_NAME`, `KIMAKI_WORKTREES=1` (fresh git worktree per session), provider keys (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GEMINI_API_KEY`) as an alternative to `/login`, `CRITIQUE_WORKER_URL` for a self-hosted critique instance.
+**`secrets/.env.agent`** — required: `KIMAKI_BOT_TOKEN`. Optional: `MACHINE_NAME`, `KIMAKI_WORKTREES=1` (fresh git worktree per session), provider keys (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GEMINI_API_KEY`) as an alternative to `/login`, `CRITIQUE_WORKER_URL` for a self-hosted critique instance (and `CRITIQUE_PASSWORD` to lock its links).
 
 **`compose/.env`** — `SHA2LATO_AGENT_IMAGE`: leave the default for local builds, or point it at your registry image once CI publishes one:
 

@@ -345,6 +345,12 @@ set -- kimaki --data-dir "$DATA_DIR" --machine-name "$MACHINE_NAME"
 if [ -n "$KIMAKI_WORKTREES" ]; then
   set -- "$@" --worktrees
 fi
+# Diffs stay in chat by default. With a self-hosted critique configured, keep
+# kimaki's diff workflow (publish a link each time) — the links stay in-house.
+# Needs kimaki >= 1.4 (--disable-prompt); the image installs latest.
+if [ -z "$CRITIQUE_WORKER_URL" ]; then
+  set -- "$@" --disable-prompt critique-diffs
+fi
 
 echo "[entrypoint] starting kimaki (machine: $MACHINE_NAME, data: $DATA_DIR)"
 exec "$@"
