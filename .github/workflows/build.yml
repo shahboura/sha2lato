@@ -92,9 +92,11 @@ jobs:
           # strings only (mode=max exposes them), never secrets.
           provenance: mode=max
           sbom: true
-          # Per-arch cache scopes: never restore an arm64 layer on amd64.
-          cache-from: type=gha,scope=${{ matrix.arch }}
-          cache-to: type=gha,mode=max,scope=${{ matrix.arch }}
+          # Cold build every run: the image tracks floating `latest` deps
+          # (kimaki, opencode, apt) that a layer cache silently freezes — a
+          # cached `npm i -g kimaki@latest` shipped 1.3.0 after 1.4.0 released.
+          # ~15 min per arch is the accepted cost.
+          no-cache: true
 
       # Runs the published artifact on its native arch (not the local build):
       # catches a wrong-arch manifest, a lost version stamp, or a broken
