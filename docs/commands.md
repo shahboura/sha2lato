@@ -24,7 +24,7 @@ Kimaki is the bot itself ([remorses/kimaki](https://github.com/remorses/kimaki))
 | `/fork`, `/fork-subagent` / `/new-worktree`, `/merge-worktree`, `/worktrees` | Branch out — fork sessions; worktree lifecycle |
 | `/routines` | Scheduled prompts — list, run one now, or delete |
 
-CLI examples (agent-run in-session, or from the host via `docker compose … exec agent`):
+CLI examples (agent-run in-session, or from the host via `docker compose … exec agent` — never run bare `kimaki` from any shell inside the container: it evicts the running bot, so the container exits and restarts; see [troubleshooting.md](troubleshooting.md)):
 
 | Command | What it does |
 |---|---|

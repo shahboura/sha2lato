@@ -4,7 +4,9 @@
 #   no args : start the kimaki bot (headless self-hosted via KIMAKI_BOT_TOKEN,
 #             which kimaki persists to /data/kimaki.db on first start)
 #   args    : exec them — `docker compose run -it agent bash`,
-#             `docker compose run -it agent kimaki --restart-onboarding`, ...
+#             `docker compose run -it agent kimaki --restart-onboarding`
+#             (stop the agent service first: the one-off shares /data, so a
+#             second bot would race the live one on kimaki.db and lock-token), ...
 
 set -e
 

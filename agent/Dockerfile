@@ -134,13 +134,18 @@ RUN corepack enable \
 RUN curl -fsSL https://opencode.ai/v2/install | bash
 ENV PATH="/root/.opencode/bin:${PATH}"
 
-# ── Keep OpenCode state on the /data volume ────────────────────────────────
+# ── Keep agent state on the /data volume ───────────────────────────────────
 # XDG_CACHE_HOME keeps fetched plugin clones (e.g. superpowers) on the volume
 # too — offline starts after a container recreate keep working.
+# KIMAKI_DATA_DIR is upstream kimaki's own override (cli/shared.ts): its plugin
+# injects it into agent tool shells, but `docker compose exec` shells inherit
+# only the container env — without it, data-dir CLI calls resolve ~/.kimaki and
+# report "not running" while the bot's db/token/log live in /data.
 ENV XDG_DATA_HOME=/data/opencode/data \
     XDG_STATE_HOME=/data/opencode/state \
     XDG_CONFIG_HOME=/data/opencode/config \
-    XDG_CACHE_HOME=/data/opencode/cache
+    XDG_CACHE_HOME=/data/opencode/cache \
+    KIMAKI_DATA_DIR=/data
 
 # No legacy ~/.config/opencode symlink: kimaki (>= 1.2) and the
 # agents-opencode installer (>= 3.1) both honor XDG_CONFIG_HOME. A symlink at
