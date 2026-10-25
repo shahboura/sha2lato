@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.1](https://github.com/shahboura/sha2lato/compare/v1.2.0...v1.2.1) (2026-10-25)
+
+
+### Bug Fixes
+
+* **image:** resolve kimaki data dir in host exec shells ([34314b9](https://github.com/shahboura/sha2lato/commit/34314b973462c10598a1648f7f509f7289fa132d))
+
 ## [1.2.0](https://github.com/shahboura/sha2lato/compare/v1.1.0...v1.2.0) (2026-10-24)
 
 
