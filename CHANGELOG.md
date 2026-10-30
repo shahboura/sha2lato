@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.3](https://github.com/shahboura/sha2lato/compare/v1.2.2...v1.2.3) (2026-10-30)
+
+
+### Bug Fixes
+
+* **image:** fetch the critique tarball from its CDN URL, with retries ([f1c3979](https://github.com/shahboura/sha2lato/commit/f1c3979ccaa8cbaed0fb0fd730907e2899ec26fe))
+
 ## [1.2.2](https://github.com/shahboura/sha2lato/compare/v1.2.1...v1.2.2) (2026-10-30)
 
 
