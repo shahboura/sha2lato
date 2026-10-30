@@ -7,8 +7,8 @@ Every versioned component this box pulls from upstream — what it is, where its
 | Lane | Covers | What you do |
 |---|---|---|
 | **Automatic** | CI actions + pinned Docker images | merge Renovate PRs (Mondays) |
-| **Scheduled** | Floating build-time deps: base image, npm, apt, kimaki, ui-ux-pro-max, critique, tuistory, bun, playwright, gh, OpenCode, Docker CLI | nothing on CI-deployed hosts — the weekly rebuild republishes `:latest` **and deploys it** (GitHub `rebuild.yml`; Forgejo: cron in `.forgejo/workflows/ci.yml`). No CI deploy: `./deploy/update.sh` ([compose-UI users](compose-ui.md): **Redeploy**) |
-| **Manual** | Deliberate pins: graphify CLI, ponytail default, linter + Forgejo job-image digests | bump the pin — workflow pins are commit-only; image pins also need a rebuild/redeploy |
+| **Scheduled** | Floating build-time deps: base image, npm, apt, kimaki, ui-ux-pro-max, tuistory, bun, playwright, gh, OpenCode, Docker CLI | nothing on CI-deployed hosts — the weekly rebuild republishes `:latest` **and deploys it** (GitHub `rebuild.yml`; Forgejo: cron in `.forgejo/workflows/ci.yml`). No CI deploy: `./deploy/update.sh` ([compose-UI users](compose-ui.md): **Redeploy**) |
+| **Manual** | Deliberate pins: critique CLI release tag, graphify CLI, ponytail default, linter + Forgejo job-image digests | bump the pin — workflow pins are commit-only; image pins also need a rebuild/redeploy |
 | **Runtime** | Workflow packs + ponytail plugin — no rebuild at all | edit `AGENT_PACK` / `PONYTAIL_SPEC` in `secrets/.env.agent` (or your compose UI's `.env` editor) + `up -d` to recreate — env files are re-read on recreate, not on a plain restart ([compose-UI users](compose-ui.md): **Redeploy**) |
 
 ## Image substrate (build-time — `agent/Dockerfile`)
@@ -19,7 +19,7 @@ Every versioned component this box pulls from upstream — what it is, where its
 | npm | [npm/cli](https://github.com/npm/cli) | Artistic-2.0 | `npm -g` @latest (refreshes the base image's bundled npm) | `NPM_VERSION` build arg | weekly rebuild (arg can pin) |
 | kimaki | [remorses/kimaki](https://github.com/remorses/kimaki) | MIT | `npm -g` @latest | `KIMAKI_VERSION` build arg | weekly rebuild (arg can pin) |
 | ui-ux-pro-max CLI | [nextlevelbuilder/ui-ux-pro-max-skill](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill) | MIT | `npm -g` @latest | `UIPRO_VERSION` build arg | weekly rebuild (arg can pin) |
-| critique CLI | [remorses/critique](https://github.com/remorses/critique) | MIT | `npm -g` @latest | `CRITIQUE_VERSION` build arg | weekly rebuild (arg can pin) |
+| critique CLI | [shahboura/critique](https://github.com/shahboura/critique) (fork) | MIT | GitHub release tarball: `npm install -g` of the downloaded `.tgz` (never the npm registry) | `CRITIQUE_VERSION` = release version `x.y.z` | **manual bump** — one ARG, so no pipeline floats it |
 | tuistory | [remorses/tuistory](https://github.com/remorses/tuistory) | MIT | `npm -g` @latest | `TUISTORY_VERSION` build arg | weekly rebuild (arg can pin) |
 | bun | [oven-sh/bun](https://github.com/oven-sh/bun) | MIT | `npm -g` (official npm dist) | `BUN_VERSION` build arg | weekly rebuild (arg can pin) |
 | corepack | [nodejs/corepack](https://github.com/nodejs/corepack) | MIT | `npm -g` @latest (no longer in Node 26) | floating | weekly rebuild |
@@ -33,6 +33,8 @@ Every versioned component this box pulls from upstream — what it is, where its
 | Optional GitHub runner | [myoung34/docker-github-actions-runner](https://github.com/myoung34/docker-github-actions-runner) | GPL-3.0 | compose profile | `:latest` tag | Renovate / manual |
 
 Build-arg mechanics: [configuration.md → Build-time](configuration.md#build-time-custom-image).
+
+critique's release tarball ships no lockfile, so its transitive npm dependencies re-resolve from the registry at build time — the CLI version is pinned, the dependency tree is not.
 
 > npm 12 (the `latest` lane) tightened defaults for every install inside the box: dependency install scripts are denied unless listed (`--allow-scripts` / `allowScripts`), and git/URL dependencies are blocked (`allow-git` / `allow-remote = none`). Symptoms and opt-ins: [troubleshooting.md](troubleshooting.md). Pin `NPM_VERSION=11.x` to keep the old permissive behavior.
 
@@ -68,11 +70,11 @@ Grammar and behavior: [usage.md → Workflow pack + extras](usage.md#workflow-pa
 ## Update everything (checklist)
 
 1. **Merge Renovate PRs** — actions, docker images (dind, base, runner).
-2. **Bump manual pins if wanted** — `GRAPHIFY_VERSION`, linter digests ([procedure](ci-cd.md#linter-pinning)), Forgejo job-image digest, ponytail default spec.
+2. **Bump manual pins if wanted** — `CRITIQUE_VERSION` (critique release tag), `GRAPHIFY_VERSION`, linter digests ([procedure](ci-cd.md#linter-pinning)), Forgejo job-image digest, ponytail default spec.
 3. **Rebuild / redeploy** — `./deploy/update.sh` on the host; CI-deployed users get it from the weekly rebuild (GitHub `rebuild.yml` / Forgejo cron) or dispatch it manually; compose-UI users: **Redeploy**.
 4. **Runtime packs** — bare values are already current (re-resolved at every container start); exact pins apply on the next start.
 5. **Verify** — CI green, then watch the entrypoint convergence lines in the logs ([troubleshooting.md](troubleshooting.md)).
 
 ## Last verified build
 
-2026-10-19, `sha2lato-agent:node26` (linux/amd64, branch `node26-slim`): node 26.12.0 · npm 11.20.0 · corepack 0.36.0 (pnpm 12.14.0 / yarn 1.22.22 via shims) · kimaki 1.2.0 · ui-ux-pro-max-cli 2.15.0 · critique 0.4.0 · tuistory 0.12.0 · bun 1.4.3 · playwright 1.64.1 · gh 2.102.0 · graphify 0.9.92 · OpenCode v2.0.32 · python 3.13.5 · docker CLI 29.9.1 · git 2.47.3 — build + in-image smoke (every tool, `critique --web`, a Chromium screenshot, the shims) and `test/lint-sim.sh` green; the arm64 image builds and smokes clean under QEMU too (build-essential path); the Discord gateway leg runs on deploy of this image. Size ≈ 2.0 GB of content (`du`); `docker images` reports ~2.74 GB (daemon accounting) — 0.69 GB less than the 2026-10-18 image (3.42 GB) after pruning source maps/types and critique's unused 3D deps and making `build-essential` arm64-only.
+2026-10-19, `sha2lato-agent:node26` (linux/amd64, branch `node26-slim`): node 26.12.0 · npm 11.20.0 · corepack 0.36.0 (pnpm 12.14.0 / yarn 1.22.22 via shims) · kimaki 1.2.0 · ui-ux-pro-max-cli 2.15.0 · critique 0.4.0 (npm — the install path has since changed, see the row above) · tuistory 0.12.0 · bun 1.4.3 · playwright 1.64.1 · gh 2.102.0 · graphify 0.9.92 · OpenCode v2.0.32 · python 3.13.5 · docker CLI 29.9.1 · git 2.47.3 — build + in-image smoke (every tool, `critique --web`, a Chromium screenshot, the shims) and `test/lint-sim.sh` green; the arm64 image builds and smokes clean under QEMU too (build-essential path); the Discord gateway leg runs on deploy of this image. Size ≈ 2.0 GB of content (`du`); `docker images` reports ~2.74 GB (daemon accounting) — 0.69 GB less than the 2026-10-18 image (3.42 GB) after pruning source maps/types and critique's unused 3D deps and making `build-essential` arm64-only.

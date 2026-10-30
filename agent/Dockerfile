@@ -4,8 +4,7 @@
 # Design notes:
 # - Base: node:26-trixie-slim (Debian 13, Node 26 — LTS from 2026-10-28).
 #   Kimaki's own Dockerfile stays on bookworm; trixie is chosen here for GCC
-#   14's libstdc++ (GLIBCXX 3.4.33), which native prebuilds (critique/
-#   tree-sitter) require.
+#   14's libstdc++ (GLIBCXX 3.4.33), which native prebuilds require.
 # - Agent tools baked for kimaki features: critique (diff viewer), tuistory
 #   (background sessions), bun, playwright CLI + chromium system deps
 #   (headless screenshots — install browsers with `playwright install`; they
@@ -32,7 +31,12 @@ ARG DEBIAN_FRONTEND=noninteractive
 ARG NPM_VERSION=latest
 ARG KIMAKI_VERSION=latest
 ARG UIPRO_VERSION=latest
-ARG CRITIQUE_VERSION=latest
+# critique ships as a GitHub release (version x.y.z, tag vx.y.z), NOT an npm
+# version: the npm package belongs to a third party. One arg to bump; the smoke
+# below fails the build if the installed version does not match it. The release
+# is mutable upstream, so this pins the version, not the bytes — enable GitHub
+# immutable releases on the fork if you need content pinning too.
+ARG CRITIQUE_VERSION=0.4.2
 ARG TUISTORY_VERSION=latest
 ARG BUN_VERSION=latest
 ARG PLAYWRIGHT_VERSION=latest
@@ -48,11 +52,10 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 # git, curl, unzip, ca-certificates  : required by kimaki / opencode
 # openssh-client                     : git over SSH (Forgejo/GitHub deploy keys)
 # python3                            : ui-ux-pro-max search scripts (stdlib only)
-# build-essential (arm64 only)       : node-gyp fallback builds — arm64 npm deps
-#                                      without prebuilds (critique's tree-sitter
-#                                      grammars). amd64 resolves prebuilds, so it
-#                                      is skipped there (~61 MB); an agent that
-#                                      must compile installs it on demand (root
+# build-essential (arm64 only)       : node-gyp fallback for arm64 npm deps that
+#                                      ship no prebuild. amd64 resolves prebuilds,
+#                                      so it is skipped there (~61 MB); an agent
+#                                      that must compile installs it on demand (root
 #                                      container, network access)
 # docker-ce-cli + buildx + compose   : docker CLI for the DinD sidecar, so the
 #                                      agent can build AND run project images
@@ -101,23 +104,57 @@ RUN set -eux; \
 # is ~680 MB. Source maps and type declarations are never read at runtime
 # (~186 MB); licenses and package metadata stay for redistribution. Do NOT
 # prune "test" dirs: playwright exports its test runner at runtime (lib/mcp/
-# test, the playwright/test entrypoint). critique's TUI pulls a separately
-# imported 3D/WebGPU entry (three/planck/bun-webgpu/@dimforge, ~60 MB) that
-# the diff path never loads.
+# test, the playwright/test entrypoint). critique's 3D/WebGPU TUI deps
+# (three/planck/bun-webgpu/@dimforge) are pruned in its own layer below; the
+# fork's CLI no longer declares them, so that list is now a guard.
 # Keep npm in THIS transaction: the base image's npm (11.x) runs the reify, so
 # the tools' own install scripts still execute. npm 12 denies dependency
 # scripts by default, so a separate `npm i -g npm@…` first would need
 # --allow-scripts for bun/playwright/… (smoke would catch it, docs explain it).
 RUN npm install -g npm@${NPM_VERSION} \
         kimaki@${KIMAKI_VERSION} ui-ux-pro-max-cli@${UIPRO_VERSION} \
-        critique@${CRITIQUE_VERSION} tuistory@${TUISTORY_VERSION} \
+        tuistory@${TUISTORY_VERSION} \
         bun@${BUN_VERSION} playwright@${PLAYWRIGHT_VERSION} corepack@latest \
     && npm cache clean --force \
     && rm -rf /root/.npm \
     && find /usr/local/lib/node_modules -type f \
-         \( -name '*.map' -o -name '*.d.ts' \) -delete \
-    && rm -rf \
-         /usr/local/lib/node_modules/critique/node_modules/{three,planck,bun-webgpu,bun-webgpu-linux-x64,@dimforge}
+         \( -name '*.map' -o -name '*.d.ts' \) -delete
+
+# ── critique fork CLI (GitHub release tarball, pinned) ─────────────────────
+# critique is NOT installed from npm: that package name belongs to a third
+# party, so it can never carry this fork's changes (diff-page UI, themes). The
+# fork publishes the CLI as a release asset instead — one architecture-
+# independent tarball (JS + wasm) — downloaded here and installed locally.
+# gh comes from the apt layer above and the repo is public, so no token is
+# needed. If that ever changes, pass one as a BuildKit secret
+# (--mount=type=secret) — a build ARG would be published in the provenance
+# attestation. curl is avoided on purpose (it drops the Authorization header
+# on the cross-host redirect to the asset).
+# --ignore-scripts mirrors the release workflow's own smoke install: the CLI
+# runs on wasm grammars, so native tree-sitter builds (node-gyp, slow on
+# arm64) are unnecessary. It blocks install scripts only — the smoke below
+# still executes the CLI as root inside this build container.
+# Prune + cache cleanup stay in this layer because Docker layers are additive.
+# The prune list: jimp (82 MB) arrives through a gifwrap <-> jimp cycle and is
+# never referenced by dist; @jimp/gifwrap/typescript come with it (typescript
+# only via that chain — dist uses the word as a language label, not an import).
+# The three/planck/bun-webgpu/@dimforge entry is a guard for a future release
+# that re-adds its old 3D TUI deps. tree-sitter prebuilds: linux-x64/arm64 stay
+# (both build legs), every other platform goes — this image is linux-only.
+RUN set -eux; \
+    gh release download "v${CRITIQUE_VERSION}" \
+        --repo shahboura/critique \
+        --pattern "critique-${CRITIQUE_VERSION}.tgz" \
+        --dir /tmp/critique-release; \
+    npm install -g --ignore-scripts "/tmp/critique-release/critique-${CRITIQUE_VERSION}.tgz"; \
+    rm -rf /tmp/critique-release; \
+    npm cache clean --force; \
+    rm -rf /root/.npm; \
+    find /usr/local/lib/node_modules/critique -type f \
+         \( -name '*.map' -o -name '*.d.ts' \) -delete; \
+    rm -rf \
+        /usr/local/lib/node_modules/critique/node_modules/{jimp,@jimp,gifwrap,typescript,three,planck,bun-webgpu,bun-webgpu-linux-x64,@dimforge} \
+        /usr/local/lib/node_modules/critique/node_modules/tree-sitter*/prebuilds/{darwin-arm64,darwin-x64,win32-arm64,win32-x64}
 
 # ── Chromium system deps + corepack shims ──────────────────────────────────
 # playwright install-deps pulls the X/GTK libraries Chromium needs (official
@@ -208,14 +245,29 @@ LABEL org.opencontainers.image.version=$SHA2LATO_VERSION
 ENV SHA2LATO_VERSION=$SHA2LATO_VERSION
 
 # ── Build-time smoke ───────────────────────────────────────────────────────
-# The npm-layer pruning is only safe while every baked CLI still starts; fail
+# The install-time pruning is only safe while every baked CLI still starts; fail
 # the build (weekly rebuild included) instead of shipping a broken tool.
+# critique gets the stricter treatment: version, runtime assets, feature marker
+# and a real two-commit diff render, so neither a swapped artifact nor an
+# over-eager prune can ship green.
 RUN export XDG_DATA_HOME=/tmp/smoke XDG_STATE_HOME=/tmp/smoke \
            XDG_CONFIG_HOME=/tmp/smoke XDG_CACHE_HOME=/tmp/smoke; \
     node -v && npm -v && python3 -V && corepack --version \
     && kimaki --help >/dev/null && critique --help >/dev/null \
+    && test "$(node -p "require('/usr/local/lib/node_modules/critique/package.json').version")" = "${CRITIQUE_VERSION}" \
+    && test -f /usr/local/lib/node_modules/critique/src/themes/github.json \
+    && test -f /usr/local/lib/node_modules/critique/public/jetbrains-mono-nerd.woff2 \
+    && grep -q 'id="to-top"' /usr/local/lib/node_modules/critique/dist/ansi-html.js \
+    && git init -q /tmp/smoke-repo \
+    && printf 'const a: number = 1;\n' > /tmp/smoke-repo/f.ts \
+    && git -C /tmp/smoke-repo add f.ts \
+    && git -C /tmp/smoke-repo -c user.email=smoke@local -c user.name=smoke commit -qm a \
+    && printf 'const a: string = "x";\nconst b = 2;\n' >> /tmp/smoke-repo/f.ts \
+    && git -C /tmp/smoke-repo -c user.email=smoke@local -c user.name=smoke commit -qam b \
+    && env -C /tmp/smoke-repo critique --json HEAD~1 HEAD >/dev/null \
     && tuistory --version && bun --version && playwright --version \
-    && graphify --help >/dev/null && opencode --version
+    && graphify --help >/dev/null && opencode --version \
+    && rm -rf /tmp/smoke-repo /tmp/smoke
 
 # No EXPOSE: the bot connects OUT to Discord; docker builds go through the
 # DinD sidecar (DOCKER_HOST); the kimaki lock port is container-internal.
