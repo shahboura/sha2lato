@@ -125,11 +125,11 @@ RUN npm install -g npm@${NPM_VERSION} \
 # party, so it can never carry this fork's changes (diff-page UI, themes). The
 # fork publishes the CLI as a release asset instead — one architecture-
 # independent tarball (JS + wasm) — downloaded here and installed locally.
-# gh comes from the apt layer above and the repo is public, so no token is
-# needed. If that ever changes, pass one as a BuildKit secret
-# (--mount=type=secret) — a build ARG would be published in the provenance
-# attestation. curl is avoided on purpose (it drops the Authorization header
-# on the cross-host redirect to the asset).
+# The download goes straight to the release asset URL, not through
+# `gh release download`: that path calls the GitHub API unauthenticated, which
+# is rate-limited and no-retry, and it failed one CI leg on a commit that then
+# built fine minutes later. curl talks to the CDN directly — no token, so the
+# cross-host redirect carries no Authorization header — and retries hard.
 # --ignore-scripts mirrors the release workflow's own smoke install: the CLI
 # runs on wasm grammars, so native tree-sitter builds (node-gyp, slow on
 # arm64) are unnecessary. It blocks install scripts only — the smoke below
@@ -142,10 +142,10 @@ RUN npm install -g npm@${NPM_VERSION} \
 # that re-adds its old 3D TUI deps. tree-sitter prebuilds: linux-x64/arm64 stay
 # (both build legs), every other platform goes — this image is linux-only.
 RUN set -eux; \
-    gh release download "v${CRITIQUE_VERSION}" \
-        --repo shahboura/critique \
-        --pattern "critique-${CRITIQUE_VERSION}.tgz" \
-        --dir /tmp/critique-release; \
+    mkdir -p /tmp/critique-release; \
+    curl -fsSL --retry 5 --retry-all-errors --retry-delay 2 \
+        -o "/tmp/critique-release/critique-${CRITIQUE_VERSION}.tgz" \
+        "https://github.com/shahboura/critique/releases/download/v${CRITIQUE_VERSION}/critique-${CRITIQUE_VERSION}.tgz"; \
     npm install -g --ignore-scripts "/tmp/critique-release/critique-${CRITIQUE_VERSION}.tgz"; \
     rm -rf /tmp/critique-release; \
     npm cache clean --force; \
