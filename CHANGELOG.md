@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.2.2](https://github.com/shahboura/sha2lato/compare/v1.2.1...v1.2.2) (2026-10-30)
+
+
+### Bug Fixes
+
+* **deps:** bump wrangler and vite-plugin to clear undici advisories ([dd9ec79](https://github.com/shahboura/sha2lato/commit/dd9ec79c5f995264f6ed906cd0617173fd89c6da))
+* **image:** install critique from its pinned release tarball ([864a3df](https://github.com/shahboura/sha2lato/commit/864a3df67376be4f02448bb762b63a083d0c4ae0))
+
 ## [1.2.1](https://github.com/shahboura/sha2lato/compare/v1.2.0...v1.2.1) (2026-10-25)
 
 
