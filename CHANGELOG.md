@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.0](https://github.com/shahboura/sha2lato/compare/v1.2.4...v1.3.0) (2026-10-31)
+
+
+### Features
+
+* **image:** install the critique CLI at container start ([ce86c1a](https://github.com/shahboura/sha2lato/commit/ce86c1a9896229e93d4ed6c913759068477df254))
+
 ## [1.2.4](https://github.com/shahboura/sha2lato/compare/v1.2.3...v1.2.4) (2026-10-31)
 
 
