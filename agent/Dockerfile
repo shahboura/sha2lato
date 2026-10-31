@@ -34,9 +34,9 @@ ARG UIPRO_VERSION=latest
 # critique ships as a GitHub release (version x.y.z, tag vx.y.z), NOT an npm
 # version: the npm package belongs to a third party. One arg to bump; the smoke
 # below fails the build if the installed version does not match it. The release
-# is mutable upstream, so this pins the version, not the bytes — enable GitHub
-# immutable releases on the fork if you need content pinning too.
-ARG CRITIQUE_VERSION=0.4.2
+# is mutable upstream, so this pins the version and verifies the release's own
+# .sha256 asset — a corruption/swapped-asset check, not an independent anchor.
+ARG CRITIQUE_VERSION=0.5.0
 ARG TUISTORY_VERSION=latest
 ARG BUN_VERSION=latest
 ARG PLAYWRIGHT_VERSION=latest
@@ -146,6 +146,12 @@ RUN set -eux; \
     curl -fsSL --retry 5 --retry-all-errors --retry-delay 2 \
         -o "/tmp/critique-release/critique-${CRITIQUE_VERSION}.tgz" \
         "https://github.com/shahboura/critique/releases/download/v${CRITIQUE_VERSION}/critique-${CRITIQUE_VERSION}.tgz"; \
+    curl -fsSL --retry 5 --retry-all-errors --retry-delay 2 \
+        -o "/tmp/critique-release/critique-${CRITIQUE_VERSION}.tgz.sha256" \
+        "https://github.com/shahboura/critique/releases/download/v${CRITIQUE_VERSION}/critique-${CRITIQUE_VERSION}.tgz.sha256"; \
+    read -r expected _ < "/tmp/critique-release/critique-${CRITIQUE_VERSION}.tgz.sha256"; \
+    read -r actual _ < <(sha256sum "/tmp/critique-release/critique-${CRITIQUE_VERSION}.tgz"); \
+    test "$expected" = "$actual"; \
     npm install -g --ignore-scripts "/tmp/critique-release/critique-${CRITIQUE_VERSION}.tgz"; \
     rm -rf /tmp/critique-release; \
     npm cache clean --force; \
