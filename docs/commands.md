@@ -74,9 +74,9 @@ Graphs are per-checkout in `graphify-out/` (keep it out of git).
 
 ## critique — the diff viewer behind /diff
 
-`/diff` and `kimaki session diff` publish through [critique](https://github.com/shahboura/critique) — the box bakes this fork's CLI from its pinned GitHub release tarball (`CRITIQUE_VERSION`, [upstreams.md](upstreams.md)). It also runs standalone; bare, it shows a local TUI diff:
+`/diff` and `kimaki session diff` publish through [critique](https://github.com/shahboura/critique) — the box installs this fork's CLI into the volume on every container start: the newest release by default, an exact version when `CRITIQUE_VERSION` pins one, cached on the volume for offline starts ([configuration.md](configuration.md), [upstreams.md](upstreams.md)). It also runs standalone; bare, it shows a local TUI diff:
 
-> Inside the box, run `critique` directly. `bunx critique` / `npx critique` resolve the **third-party npm package** of the same name, not the baked fork — that build cannot produce this fork's diff pages.
+> Inside the box, run `critique` directly. `bunx critique` / `npx critique` resolve the **third-party npm package** of the same name, not the fork's CLI — that build cannot produce this fork's diff pages.
 
 | Command | What it does |
 |---|---|

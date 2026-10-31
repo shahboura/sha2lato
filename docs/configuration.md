@@ -41,6 +41,7 @@ Everything else in the repo is impersonal — fork-safe by design ([secrets.md](
 | `GIT_SIGN` | empty (off) | `1` = SSH-sign agent commits with `secrets/ssh/signing_key` |
 | `CRITIQUE_WORKER_URL` | empty (→ `https://critique.work`) | https origin of a self-hosted critique instance for `critique --web` and `/diff`, e.g. `https://diff.example.com` |
 | `CRITIQUE_PASSWORD` | empty | password for `critique --web` links (used when `--password` is omitted; needs an https origin) |
+| `CRITIQUE_VERSION` | empty (→ latest) | critique CLI release to run: bare or `latest` resolves the fork's newest release on every container start (installed into the volume, sha256-verified); pin an exact `x.y.z` to freeze it. No cache + no network leaves `/diff` without a backend until a start succeeds |
 | `SUPERPOWERS_DISABLE_TELEMETRY` | `1` (off) | set `0` to allow the version-only telemetry ping |
 | `KIMAKI_WORKTREES` | empty (off) | `1` = fresh git worktree per session — **leave empty when superpowers is active** |
 | `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GEMINI_API_KEY` | empty | optional model keys; `/login` in Discord is the recommended path |
@@ -80,13 +81,12 @@ The image lives in `agent/` and is parameterized for reproducible builds:
 docker build \
   --build-arg KIMAKI_VERSION=1.0.0 \
   --build-arg UIPRO_VERSION=2.15.0 \
-  --build-arg CRITIQUE_VERSION=0.5.0 \
   --build-arg GRAPHIFY_VERSION=0.9.93 \
   --build-arg GRAPHIFY_EXTRAS=leiden,mcp \
   -t my-agent agent/
 ```
 
-Defaults: `KIMAKI_VERSION=latest`, `UIPRO_VERSION=latest` (the weekly rebuild refreshes them), `GRAPHIFY_VERSION=0.9.93`; the tool args `TUISTORY_VERSION`, `BUN_VERSION`, `PLAYWRIGHT_VERSION`, `NPM_VERSION` also default to `latest` (the freshness lane — each rebuild re-resolves them; set an exact version for reproducible builds). Two args are deliberate pins instead: `GRAPHIFY_VERSION`, because graphify feeds the baked usage guide and its venv extras, so majors are bumped by hand, not pulled in by a rebuild; and `CRITIQUE_VERSION` (default `0.5.0`), which is **not an npm version** — it selects a critique fork release version (full `x.y.z`, no `v` prefix; the release itself is tagged `vx.y.z`), downloaded from that GitHub release (tarball verified against the release's own `.sha256` asset — a corruption/swapped-asset check, not an independent trust anchor) and installed locally, so a rebuild never floats the CLI (the npm `critique` package belongs to a third party and cannot carry the fork's code). Upgrade it by bumping the default in `agent/Dockerfile`, where it lives; a critique version must match the fork's `cli/package.json`. `GRAPHIFY_EXTRAS` defaults to `openai`, which enables graphify's semantic LLM pass with a `DEEPSEEK_API_KEY` or `OPENAI_API_KEY` from the environment; add `leiden` for community detection or `mcp` for the MCP server, or set it empty for core graphify only. Workflow packs are **not** build args — they're runtime config (`AGENT_PACK`), so changing pack or version never needs a rebuild.
+Defaults: `KIMAKI_VERSION=latest`, `UIPRO_VERSION=latest` (the weekly rebuild refreshes them), `GRAPHIFY_VERSION=0.9.93`; the tool args `TUISTORY_VERSION`, `BUN_VERSION`, `PLAYWRIGHT_VERSION`, `NPM_VERSION` also default to `latest` (the freshness lane — each rebuild re-resolves them; set an exact version for reproducible builds). One arg is a deliberate pin: `GRAPHIFY_VERSION`, because graphify feeds the baked usage guide and its venv extras, so majors are bumped by hand, not pulled in by a rebuild. The critique CLI is **not** a build arg at all: the entrypoint installs the fork's newest release into the volume on every start (sha256-verified against the release's own `.sha256` asset — a corruption/swapped-asset check, not an independent trust anchor), so a critique bump needs no rebuild; the [`CRITIQUE_VERSION` env var](#every-knob) pins one. `GRAPHIFY_EXTRAS` defaults to `openai`, which enables graphify's semantic LLM pass with a `DEEPSEEK_API_KEY` or `OPENAI_API_KEY` from the environment; add `leiden` for community detection or `mcp` for the MCP server, or set it empty for core graphify only. Workflow packs are **not** build args — they're runtime config (`AGENT_PACK`), so changing pack or version never needs a rebuild.
 
 ## How changes apply
 
