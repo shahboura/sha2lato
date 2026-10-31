@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.4](https://github.com/shahboura/sha2lato/compare/v1.2.3...v1.2.4) (2026-10-31)
+
+
+### Bug Fixes
+
+* **image:** bump critique CLI to 0.5.0 and verify its release checksum ([091791c](https://github.com/shahboura/sha2lato/commit/091791c0a6d7a2d7f91e7f5c6fbaa906a37d449f))
+
 ## [1.2.3](https://github.com/shahboura/sha2lato/compare/v1.2.2...v1.2.3) (2026-10-30)
 
 
