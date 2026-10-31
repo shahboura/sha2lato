@@ -286,6 +286,125 @@ case "${PONYTAIL:-1}" in
     ;;
 esac
 
+# ── critique CLI (runtime — newest release at start unless pinned) ─────────
+# Not baked: the image ships no critique at all. The entrypoint installs the
+# newest fork release into the volume on every start (mirrors AGENT_PACK) — an
+# exact x.y.z pins it, and a failed resolve/fetch keeps the newest cached copy.
+# Cost of the choice: on a cold volume with no network, /diff has no backend
+# until a start succeeds (the bot itself is unaffected).
+# The PRUNE list mirrors what the image used to do — keep it aligned with the
+# package's dependency tree (jimp et al. arrive transitively, unused at runtime).
+CRITIQUE_REPO="https://github.com/shahboura/critique"
+CRITIQUE_TOOLS="$(dirname "${XDG_CONFIG_HOME:-/data/opencode/config}")/tools/critique"
+CRITIQUE_CUR="$CRITIQUE_TOOLS/current"
+
+critique_ver_ok() {
+  printf '%s' "$1" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'
+}
+
+# Newest stable tag. git ls-remote (not the GitHub API): no rate limit, the
+# same resolution style the superpowers block below uses.
+critique_latest() {
+  timeout 20 git ls-remote --tags --refs --sort=-v:refname "$CRITIQUE_REPO" 'v*' 2>/dev/null \
+    | sed 's|.*refs/tags/v||' | grep -Ev -- '-' | head -n1
+}
+
+critique_install() { # $1 = x.y.z; 0 only when the CLI bin is in place
+  _cv="$1"
+  _cdir="$CRITIQUE_TOOLS/$_cv"
+  _ctmp="$(mktemp -d 2>/dev/null)" || return 1
+  _curl="$CRITIQUE_REPO/releases/download/v$_cv"
+  if ! { curl -fsSL --retry 5 --retry-all-errors --retry-delay 2 \
+           -o "$_ctmp/critique-$_cv.tgz" "$_curl/critique-$_cv.tgz" \
+         && curl -fsSL --retry 5 --retry-all-errors --retry-delay 2 \
+           -o "$_ctmp/critique-$_cv.tgz.sha256" "$_curl/critique-$_cv.tgz.sha256"; }; then
+    rm -rf "$_ctmp"
+    return 1
+  fi
+  _cwant="$(cut -d' ' -f1 "$_ctmp/critique-$_cv.tgz.sha256")"
+  _cgot="$(sha256sum "$_ctmp/critique-$_cv.tgz" | cut -d' ' -f1)"
+  if [ -z "$_cwant" ] || [ "$_cwant" != "$_cgot" ]; then
+    rm -rf "$_ctmp"
+    return 1
+  fi
+  if ! npm install --prefix "$_cdir" --no-save --ignore-scripts --no-audit \
+         --no-fund --no-update-notifier --loglevel=error \
+         --cache "$CRITIQUE_TOOLS/.cache" "$_ctmp/critique-$_cv.tgz" >/dev/null; then
+    rm -rf "$_ctmp" "$_cdir"
+    return 1
+  fi
+  rm -rf "$_ctmp"
+  # The npm cache would sit on the volume forever and outgrow the CLI itself;
+  # a version change re-downloads anyway, so drop it once the install worked.
+  rm -rf "$CRITIQUE_TOOLS/.cache"
+  find "$_cdir" -type f \( -name '*.map' -o -name '*.d.ts' \) -delete 2>/dev/null
+  rm -rf \
+    "$_cdir/node_modules/jimp" "$_cdir/node_modules/@jimp" "$_cdir/node_modules/gifwrap" \
+    "$_cdir/node_modules/typescript" "$_cdir/node_modules/three" "$_cdir/node_modules/planck" \
+    "$_cdir/node_modules/bun-webgpu" "$_cdir/node_modules/bun-webgpu-linux-x64" \
+    "$_cdir/node_modules/@dimforge"
+  for _cp in "$_cdir"/node_modules/tree-sitter*/prebuilds/darwin-arm64 \
+             "$_cdir"/node_modules/tree-sitter*/prebuilds/darwin-x64 \
+             "$_cdir"/node_modules/tree-sitter*/prebuilds/win32-arm64 \
+             "$_cdir"/node_modules/tree-sitter*/prebuilds/win32-x64; do
+    rm -rf "$_cp"
+  done
+  # Same gate the image build used to provide: an install that cannot start
+  # must never replace a working cache.
+  [ -x "$_cdir/node_modules/.bin/critique" ] || return 1
+  "$_cdir/node_modules/.bin/critique" --version >/dev/null 2>&1
+}
+
+case "${CRITIQUE_VERSION:-latest}" in
+  ""|latest)
+    CRITIQUE_WANT="$(critique_latest)"
+    if [ -z "$CRITIQUE_WANT" ] || ! critique_ver_ok "$CRITIQUE_WANT"; then
+      CRITIQUE_WANT=""
+      CRITIQUE_SKIP="could not resolve the latest release (offline?)"
+    fi
+    ;;
+  *)
+    if critique_ver_ok "$CRITIQUE_VERSION"; then
+      CRITIQUE_WANT="$CRITIQUE_VERSION"
+    else
+      CRITIQUE_WANT=""
+      echo "[entrypoint] WARNING: invalid CRITIQUE_VERSION='$CRITIQUE_VERSION' — expected x.y.z or 'latest'; using the cached copy" >&2
+    fi
+    ;;
+esac
+
+if [ -n "$CRITIQUE_WANT" ]; then
+  if [ -x "$CRITIQUE_TOOLS/$CRITIQUE_WANT/node_modules/.bin/critique" ]; then
+    ln -sfn "$CRITIQUE_TOOLS/$CRITIQUE_WANT/node_modules/.bin" "$CRITIQUE_CUR"
+    echo "[entrypoint] critique $CRITIQUE_WANT (cached)"
+  elif critique_install "$CRITIQUE_WANT"; then
+    ln -sfn "$CRITIQUE_TOOLS/$CRITIQUE_WANT/node_modules/.bin" "$CRITIQUE_CUR"
+    echo "[entrypoint] critique $CRITIQUE_WANT installed"
+    for _cdir in "$CRITIQUE_TOOLS"/*; do
+      [ "$_cdir" = "$CRITIQUE_TOOLS/$CRITIQUE_WANT" ] && continue
+      [ "$_cdir" = "$CRITIQUE_CUR" ] && continue
+      [ -d "$_cdir" ] && rm -rf "$_cdir"
+    done
+  else
+    echo "[entrypoint] WARNING: critique $CRITIQUE_WANT fetch/install failed — using the cached or baked copy" >&2
+  fi
+fi
+
+# Runtime-only install (the image ships no critique): `docker compose exec`
+# shells do NOT inherit the entrypoint's env, so the stable /usr/local/bin name
+# is relinked instead of PATH-shadowed. No cache and no network leaves /diff
+# reporting the CLI as missing until a later start succeeds.
+if [ -x "$CRITIQUE_CUR/critique" ]; then
+  ln -sf "$CRITIQUE_CUR/critique" /usr/local/bin/critique
+fi
+if [ -n "${CRITIQUE_SKIP:-}" ]; then
+  if [ -x "$CRITIQUE_CUR/critique" ]; then
+    echo "[entrypoint] critique refresh skipped — $CRITIQUE_SKIP; using the cached copy"
+  else
+    echo "[entrypoint] WARNING: critique refresh skipped — $CRITIQUE_SKIP and no cache; /diff is unavailable until a start succeeds" >&2
+  fi
+fi
+
 # Converge permissions after the pack and ponytail steps (either may create
 # the config first) and before kimaki starts the OpenCode service (config is
 # read at service start).
