@@ -25,9 +25,9 @@ cp secrets/.env.agent.example secrets/.env.agent
 cp compose/.env.example compose/.env
 ```
 
-**`secrets/.env.agent`** — required: `KIMAKI_BOT_TOKEN`. Optional: `MACHINE_NAME`, `KIMAKI_WORKTREES=1` (fresh git worktree per session), provider keys (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GEMINI_API_KEY`) as an alternative to `/login`, `CRITIQUE_WORKER_URL` for a self-hosted critique instance (and `CRITIQUE_PASSWORD` to lock its links).
+**`secrets/.env.agent`** — required: `KIMAKI_BOT_TOKEN`. Optional: `MACHINE_NAME`, `KIMAKI_WORKTREES=1` (fresh git worktree per session), provider keys (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GEMINI_API_KEY`) as an alternative to `/login`, `CRITIQUE_WORKER_URL` for a self-hosted critique instance (and `CRITIQUE_PASSWORD` to lock its links), `KIMAKI_WHISPER_URL`/`KIMAKI_WHISPER_MODEL` for on-box voice transcription (with `COMPOSE_PROFILES=whisper` in `compose/.env` — see [configuration.md](configuration.md#local-whisper-optional)).
 
-**`compose/.env`** — `SHA2LATO_AGENT_IMAGE`: leave the default for local builds, or point it at your registry image once CI publishes one:
+**`compose/.env`** — `SHA2LATO_AGENT_IMAGE`: leave the default for local builds, or point it at your registry image once CI publishes one. Add `COMPOSE_PROFILES=whisper` to enable the optional local Whisper service ([configuration.md](configuration.md#local-whisper-optional)):
 
 ```ini
 SHA2LATO_AGENT_IMAGE=ghcr.io/YOUR_USERNAME/sha2lato-agent:latest

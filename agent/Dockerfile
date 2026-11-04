@@ -203,10 +203,20 @@ ENV SHA2LATO_VERSION=$SHA2LATO_VERSION
 # ── Build-time smoke ───────────────────────────────────────────────────────
 # The install-time pruning is only safe while every baked CLI still starts; fail
 # the build (weekly rebuild included) instead of shipping a broken tool.
+# `kimaki diagram` (>= 1.5) loads @resvg/resvg-js, a native module that
+# `kimaki --help` never touches — render one tiny Mermaid file so a broken
+# prebuild fails the build on both arches. Conditional so a KIMAKI_VERSION
+# pin below 1.5 still builds.
 RUN export XDG_DATA_HOME=/tmp/smoke XDG_STATE_HOME=/tmp/smoke \
            XDG_CONFIG_HOME=/tmp/smoke XDG_CACHE_HOME=/tmp/smoke; \
     node -v && npm -v && python3 -V && corepack --version \
     && kimaki --help >/dev/null \
+    && mkdir -p /tmp/smoke \
+    && if kimaki --help 2>&1 | grep 'diagram' >/dev/null; then \
+         printf 'flowchart LR\n  a-->b\n' > /tmp/smoke/diagram.mmd; \
+         kimaki diagram /tmp/smoke/diagram.mmd -o /tmp/smoke/diagram.png; \
+         test -s /tmp/smoke/diagram.png; \
+       fi \
     && tuistory --version && bun --version && playwright --version \
     && graphify --help >/dev/null && opencode --version \
     && rm -rf /tmp/smoke

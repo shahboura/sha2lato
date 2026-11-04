@@ -1,9 +1,10 @@
 # Usage — day 2 from your phone
 
-The mental model is simple: **channels are projects, threads are sessions.**
+The mental model: **channels are projects, threads are sessions** — and since Kimaki 1.5 a channel is also a chat with one long-lived **coordinator** session that delegates work to threads.
 
-- Send a message in a project channel → Kimaki starts a **thread** = one OpenCode session working in that project's directory.
-- Return to any thread anytime (search, `/resume`) — or start a new one by sending a new message in the channel.
+- Send a message in a project channel → the coordinator answers there and starts a **thread** per piece of work; each thread is one OpenCode session working in that project's directory.
+- `/new-session` starts a thread without the coordinator; `/toggle-coordinator` switches coordinator mode off for that channel; `/reset-coordinator` starts a fresh coordinator on the next message.
+- Return to any thread anytime (search, `/resume`) — or start a new one with `/new-session`.
 - Everything the agent does (reads, edits, test runs, docker builds) happens on **your** host, inside the agent container and its DinD sidecar.
 
 ## First steps in Discord
@@ -37,7 +38,8 @@ Requirements: SSH access to the git host (see [secrets.md](secrets.md)); git pre
 - **Worktrees — isolated experiments** — `/new-worktree <name>` starts a session in a fresh git worktree (never touching your main checkout); `/merge-worktree` merges it back (rebase or squash). Make it automatic per channel with `kimaki channel worktrees on` (or `KIMAKI_WORKTREES=1` for all sessions).
 - **Review diffs on your phone** — `/diff` posts a shareable web diff URL of the session's changes.
 - **Tunnels — see your dev server from your phone** — ask the agent to run `kimaki tunnel -- <dev command>` (or `-p <port>`); it prints a public URL you can open anywhere. Keep a tunnel alive in a named background session and read its output later via `tuistory` — e.g. `tuistory launch "kimaki tunnel -- pnpm dev" -s myapp-dev`, then `tuistory read -s myapp-dev` to grab the URL.
-- **Voice** — record a voice note (transcribed with your file tree for accuracy); or join the **Kimaki voice** channel and talk. `kimaki --voice <name>` once to change the voice.
+- **Voice** — record a voice note (transcribed with your file tree by default, or on-box when the optional [local Whisper](configuration.md#local-whisper-optional) service is enabled); or join the **Kimaki voice** channel and talk. `kimaki --voice <name>` once to change the voice.
+- **Diagrams** — the agent renders Mermaid to a PNG with `kimaki diagram` and posts it; repo docs keep Mermaid source (GitHub/Forgejo render it), so don't commit the PNGs.
 - **Images & files** — attach screenshots/files to messages; the agent can also upload files back into the thread.
 - **Shell commands** — prefix a message with `!` to run it raw in the project folder (e.g. `! git status`).
 - **Routines — scheduled prompts** — ask for a cron-style routine (e.g. “every weekday at 8:00, summarize open PRs in this channel”) — great for morning digests from your phone.

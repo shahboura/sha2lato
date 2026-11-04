@@ -15,6 +15,8 @@ docker compose -f compose/docker-compose.yml exec agent kimaki status
 |---|---|
 | Agent container **restart-loops**; logs show `install_url` / gateway events | `KIMAKI_BOT_TOKEN` missing or malformed in `secrets/.env.agent` — the box fell back to Kimaki's shared-bot onboarding. Set the token → `up -d` |
 | Bot **online but silent** in channels | Message Content Intent disabled in the Developer Portal, or the channel doesn't belong to this machine. Check [discord-bot.md](discord-bot.md) + Kimaki's `no-kimaki`/role rules |
+| Channel answers in the channel instead of opening a thread | Kimaki 1.5 coordinator mode (default): the channel is a chat with one long-lived session that starts worker threads. `/toggle-coordinator` switches that channel back to thread-per-message; `/reset-coordinator` starts a fresh coordinator on the next message |
+| Onboarding starts in `#kimaki` instead of a thread | Kimaki 1.5 behavior — the channel hosts the coordinator; no action |
 | No `Kimaki <machine>` category after inviting the bot | Onboarding retries on next start: `docker compose -f compose/docker-compose.yml restart agent` |
 | Cross-directory flows (cloning a new project, `kimaki project add`) **blocked with no approve prompt** | The global `external_directory` rule is not `"ask"` — a restart re-normalizes it: `docker compose -f compose/docker-compose.yml restart agent`. The entrypoint also allow-lists the everyday dirs on every start — `/tmp/opencode` (scratch), `/data/reports`, `/data/transcripts`, `/data/attachments`; everything else asks. Inspect with `… exec agent jq '.permissions' /data/opencode/config/opencode/opencode.json` |
 | Sessions stop responding | `docker compose -f compose/docker-compose.yml exec agent opencode service restart` — Kimaki reconnects by itself |
@@ -35,6 +37,16 @@ docker compose -f compose/docker-compose.yml exec agent kimaki status
 | `npm install` skipped a project's native/build scripts | npm 12 (baked since the `NPM_VERSION=latest` lane) denies install-time lifecycle scripts by default. Allow the ones you trust: `"allowScripts"` in the project's `package.json`, or `npm i --allow-scripts=<pkg>` per command. Git deps need `--allow-git=all` / `npmrc allow-git=all`; URL tarballs `--allow-remote=all`. Pin `NPM_VERSION=11.x` to restore npm 11 behavior |
 | `curl -6` / IPv6 connections fail from inside | Expected: the box has no IPv6 egress (IPv4-only container networking); dual-stack client issues cannot be reproduced from inside |
 | `opencode upgrade` seems to have no effect | The running service keeps the old binary — restart it: `docker compose -f compose/docker-compose.yml exec agent opencode service restart` (sessions survive; pending permission prompts are cancelled) |
+
+## Voice / Whisper
+
+| Symptom | Likely cause → fix |
+|---|---|
+| Voice note fails with `Whisper server at … not reachable` | `KIMAKI_WHISPER_URL` is set but the `whisper` profile is not running — `docker compose -f compose/docker-compose.yml --profile whisper up -d`, and set `COMPOSE_PROFILES=whisper` in `compose/.env` so updates keep it. There is no cloud fallback while the URL is set |
+| First voice note after setup times out (2-minute cap) | The model was downloading inside the request. Preload it once: `docker compose -f compose/docker-compose.yml exec whisper curl -fsS -X POST http://localhost:8000/v1/models/Systran/faster-whisper-small`; keep notes short on weak CPUs |
+| Arabic / mixed-language note transcribes poorly | `small` is the multilingual baseline; switch `KIMAKI_WHISPER_MODEL` to `Systran/faster-whisper-medium` (better, ~3× slower; may hit the 2-minute cap on a weak CPU). `distil-*` is English-only |
+| Out-of-memory or slow transcription | `WHISPER__COMPUTE_TYPE=int8` and `small`/`base`; raise host RAM; the service keeps the model loaded (`WHISPER__TTL=-1`) |
+| Voice notes still hit a cloud API | `KIMAKI_WHISPER_URL` not set in the running container — check `docker compose -f compose/docker-compose.yml exec agent printenv KIMAKI_WHISPER_URL`, then `up -d` after editing `secrets/.env.agent` |
 
 ## Docker-in-Docker (agent builds)
 

@@ -23,7 +23,7 @@ docker compose -f compose/docker-compose.yml up -d
 | File | From template | Holds | Committed |
 |---|---|---|---|
 | `secrets/.env.agent` | `secrets/.env.agent.example` | runtime config: bot token, pack, worktrees, optional keys | ❌ (chmod 600) |
-| `compose/.env` | `compose/.env.example` | which image to run | ❌ |
+| `compose/.env` | `compose/.env.example` | which image to run + optional compose profiles (`COMPOSE_PROFILES`) | ❌ |
 
 Everything else in the repo is impersonal — fork-safe by design ([secrets.md](secrets.md)).
 
@@ -44,10 +44,47 @@ Everything else in the repo is impersonal — fork-safe by design ([secrets.md](
 | `CRITIQUE_VERSION` | empty (→ latest) | critique CLI release to run: bare or `latest` resolves the fork's newest release on every container start (installed into the volume, sha256-verified); pin an exact `x.y.z` to freeze it. No cache + no network leaves `/diff` without a backend until a start succeeds |
 | `SUPERPOWERS_DISABLE_TELEMETRY` | `1` (off) | set `0` to allow the version-only telemetry ping |
 | `KIMAKI_WORKTREES` | empty (off) | `1` = fresh git worktree per session — **leave empty when superpowers is active** |
+| `KIMAKI_WHISPER_URL` | empty (→ cloud) | base URL of a Whisper server (`/v1`), e.g. `http://whisper:8000/v1`. When set it is the **only** voice transcriber — no cloud fallback ([Local Whisper](#local-whisper-optional)) |
+| `KIMAKI_WHISPER_MODEL` | `whisper-1` | model ID sent to the Whisper server (Hugging Face repo for speaches, e.g. `Systran/faster-whisper-small`) |
+| `KIMAKI_WHISPER_API_KEY` | empty | bearer token for the Whisper server, if it requires one |
 | `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GEMINI_API_KEY` | empty | optional model keys; `/login` in Discord is the recommended path |
 | `SHA2LATO_AGENT_IMAGE` | `sha2lato-agent:local` | selects the [deployment mode](#deployment-modes): local tag = build on host, any registry ref = pull |
 
-**Voice & TTS:** voice messages and `kimaki tts` need an OpenAI or Gemini key on this self-hosted setup — set `OPENAI_API_KEY` or `GEMINI_API_KEY` in `secrets/.env.agent` (above), or use `/transcription-key` in Discord (saved in `kimaki.db` on the volume).
+**Voice & TTS:** voice messages use a cloud key by default — set `OPENAI_API_KEY` or `GEMINI_API_KEY` in `secrets/.env.agent` (above), or use `/transcription-key` in Discord (saved in `kimaki.db` on the volume). `kimaki tts` (spoken replies) always needs one of those keys.
+
+### Local Whisper (optional)
+
+To transcribe voice notes on this host instead of a cloud provider, enable the bundled [speaches](https://github.com/speaches-ai/speaches) service (MIT, CPU, pinned `0.8.3-cpu@sha256:21e3df06…`, profile `whisper`):
+
+1. Enable the profile in `compose/.env`:
+
+   ```ini
+   COMPOSE_PROFILES=whisper
+   ```
+
+2. Point Kimaki at it in `secrets/.env.agent`:
+
+   ```ini
+   KIMAKI_WHISPER_URL=http://whisper:8000/v1
+   KIMAKI_WHISPER_MODEL=Systran/faster-whisper-small
+   ```
+
+3. Start the stack and preload the model once (the first fetch downloads ~486 MB from Hugging Face into the `sha2lato-whisper-models` volume; later starts are local):
+
+   ```bash
+   docker compose -f compose/docker-compose.yml up -d
+   docker compose -f compose/docker-compose.yml exec whisper \
+     curl -fsS -X POST http://localhost:8000/v1/models/Systran/faster-whisper-small
+   ```
+
+   The compose service sets `WHISPER__TTL=-1`, so the model stays in RAM between notes. (speaches 0.9 renames that knob to `STT_MODEL_TTL` — update the compose line on a major bump.)
+
+Behavior and limits:
+
+- **Only transcriber.** While `KIMAKI_WHISPER_URL` is set, Kimaki never falls back to OpenAI/Gemini — if the profile is off or the service is down, voice notes fail with an error in the thread. Enable the profile and the URL together.
+- **Privacy.** Audio goes from the agent to `whisper` over the compose network; no port is published. The model weights are the only outbound fetch (Hugging Face, once). `kimaki tts` and live voice calls are unaffected and still use OpenAI/Gemini/ChatGPT.
+- **Model.** `Systran/faster-whisper-small` (~486 MB, multilingual) is the recommended default; `base` is faster but weaker; `distil-*` is English-only. For Arabic and mixed-language notes, `small` is usable and `medium` is more accurate but ~3× slower — it can exceed Kimaki's 2-minute transcription cap on a weak CPU. Test with a real note before switching.
+- **Updates.** The image is pinned `tag@digest` for reproducible builds: Renovate tracks pinned images on Mondays, and if the `-cpu` suffix is not picked up, bump tag + digest by hand. The model is a manual env change — edit `KIMAKI_WHISPER_MODEL`, preload the new ID, and prune the volume to remove old weights. The model ID resolves to a mutable Hugging Face repo (Kimaki's model field has no revision pin), so the weights are the one dependency not pinned by digest.
 
 Rarely-needed knobs:
 

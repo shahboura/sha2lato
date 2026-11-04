@@ -103,6 +103,7 @@ ufw --force enable    # default-deny everything else inbound
 | Agent + DinD idling, light sessions | 2 GB RAM / 2 vCPU — workable |
 | Comfortable daily driving, docker builds by the agent | 4 GB RAM / 2 vCPU |
 | Heavy projects / many parallel sessions | 8 GB — plenty |
+| Add the optional local Whisper service | +~1 GB RAM (small int8, kept loaded) + ~2–3 GB disk (image + model) |
 
 Notes:
 

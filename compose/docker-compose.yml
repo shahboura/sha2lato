@@ -3,6 +3,7 @@
 #   agent         kimaki + opencode 2 + ui-ux-pro-max skill (the custom image)
 #   dind          docker-in-docker sidecar: the agent builds & runs project
 #                 images through it (DOCKER_HOST), isolated from the host
+#   whisper       optional local speech-to-text for voice notes (profile, off)
 #   github-runner optional self-hosted GitHub Actions runner (profile, off)
 #
 # Personal config lives in secrets/*.env (see the *.example files) and
@@ -76,6 +77,36 @@ services:
       start_period: 20s
       retries: 3
 
+  # Optional: local speech-to-text for Kimaki voice notes (profile "whisper").
+  # Enable with COMPOSE_PROFILES=whisper in compose/.env, then point the agent
+  # at it (KIMAKI_WHISPER_URL=http://whisper:8000/v1 and
+  # KIMAKI_WHISPER_MODEL=Systran/faster-whisper-small — speaches has no
+  # `whisper-1`). Audio never leaves this host and Kimaki uses no cloud
+  # transcriber while the URL is set. No ports: only containers on the
+  # compose network can reach it.
+  # Image is third-party (MIT) and pinned tag@digest, like the runner below.
+  whisper:
+    image: ghcr.io/speaches-ai/speaches:0.8.3-cpu@sha256:21e3df06d842fb7802ab470dd77c25f0e8c0d22950e8d8c6ae886e851af53ef8
+    profiles: ["whisper"]
+    restart: unless-stopped
+    environment:
+      WHISPER__INFERENCE_DEVICE: cpu
+      WHISPER__COMPUTE_TYPE: int8
+      # Keep the model in RAM between notes. 0.8.x name; 0.9 renames it to
+      # STT_MODEL_TTL, so update this line on a major bump.
+      WHISPER__TTL: "-1"
+      ENABLE_UI: "false"
+      LOG_LEVEL: info
+    volumes:
+      # Model weights are downloaded once (Hugging Face) into this volume.
+      - whisper-models:/home/ubuntu/.cache/huggingface/hub
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      start_period: 30s
+      retries: 3
+
   # Optional: self-hosted GitHub Actions runner. Off by default.
   # Enable: docker compose --profile github-runner up -d  (docs/github-runner.md)
   github-runner:
@@ -107,5 +138,7 @@ volumes:
     name: sha2lato-dind-certs
   dind-data:
     name: sha2lato-dind-data
+  whisper-models:
+    name: sha2lato-whisper-models
   github-runner-data:
     name: sha2lato-github-runner-data

@@ -2,13 +2,13 @@
 
 > **Your AI dev team, one Discord message away.**
 
-A self-hosted coding-agent box. [Kimaki](https://kimaki.dev) turns Discord into the control surface for [OpenCode 2](https://opencode.ai): every **channel is a project**, every **thread is a coding session**. Change a feature from your phone on the train, review the diff at lunch, merge the worktree before dinner — the agent runs the tests and builds the images on a machine you own.
+A self-hosted coding-agent box. [Kimaki](https://kimaki.dev) turns Discord into the control surface for [OpenCode 2](https://opencode.ai): every **channel is a project**, every **thread is a coding session**, and a channel-level coordinator delegates the work (Kimaki 1.5). Change a feature from your phone on the train, review the diff at lunch, merge the worktree before dinner — the agent runs the tests and builds the images on a machine you own.
 
-Ships as one small repo: **one custom Docker image** (Kimaki + OpenCode 2 + the [ui-ux-pro-max](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill) design skill + git/ssh/Docker tooling) wired together with official images via Docker Compose, with CI on GitHub **and** Forgejo that builds multi-arch images and deploys them over SSH.
+Ships as one small repo: **one custom Docker image** (Kimaki + OpenCode 2 + the [ui-ux-pro-max](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill) design skill + git/ssh/Docker tooling) wired together with official and pinned third-party images via Docker Compose, with CI on GitHub **and** Forgejo that builds multi-arch images and deploys them over SSH.
 
 ## What you get
 
-- 🎛️ **Discord as your control surface** — channels are projects, threads are sessions; search, resume, fork, `/diff`, `/btw`, queue, voice notes
+- 🎛️ **Discord as your control surface** — channels are projects, threads are sessions, a coordinator delegates the work; search, resume, fork, `/diff`, `/btw`, queue, voice notes (on-box with the optional Whisper service)
 - 🧠 **The models you already pay for** — run `/login` in Discord and use Claude Pro/Max, ChatGPT, Gemini, or API keys
 - 🐳 **Docker-in-Docker included** — the agent can build **and run** images for Docker-based projects, isolated from the host
 - 🎨 **Design intelligence baked in** — `npm i` a UI and the agent pulls the full ui-ux-pro-max skill suite (styles, palettes, fonts, stack guides)
@@ -28,8 +28,12 @@ flowchart LR
         agent["agent (custom image)<br/>kimaki + opencode 2 + ui-ux-pro-max<br/>git, ssh, docker CLI"]
         vol[("data volume<br/>projects, sessions, model logins")]
         dind["dind sidecar<br/>builds and runs project images"]
+        whisper["whisper (optional)<br/>local speech-to-text"]
+        wvol[("whisper model cache")]
         agent <--> vol
         agent <--> dind
+        agent -- "voice notes" --> whisper
+        whisper <--> wvol
     end
 
     server -- "your own bot connects out" --> agent

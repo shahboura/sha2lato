@@ -67,7 +67,7 @@ Open the printed URL in a browser logged into Discord, pick your server (a **ded
 
 ## 4. Finish onboarding
 
-Once authorized, Kimaki creates a category **`Kimaki <MACHINE_NAME>`** with a `#kimaki` channel and an onboarding thread. If nothing appears within a minute (the bot was invited after its first boot), give it a nudge:
+Once authorized, Kimaki creates a category **`Kimaki <MACHINE_NAME>`** with a `#kimaki` channel (with coordinator mode on — the box's default — Kimaki 1.5 onboards in the channel; older versions used an onboarding thread). If nothing appears within a minute (the bot was invited after its first boot), give it a nudge:
 
 ```bash
 docker compose -f compose/docker-compose.yml restart agent
@@ -75,7 +75,7 @@ docker compose -f compose/docker-compose.yml restart agent
 
 Then, in Discord:
 
-1. Open the onboarding thread of your server and chat with the agent, or
+1. Open the `#kimaki` channel and chat with the agent (in Kimaki 1.5 the channel hosts the coordinator session), or
 2. Run **`/login`** in any channel — connect Claude Pro/Max, ChatGPT, Gemini, or an API key. Credentials are stored by OpenCode on the volume, so they survive restarts and image updates.
 
 You are done. Send a message in `#kimaki` describing what you want, or tell the agent to clone a repo and add it as a project (see [usage.md](usage.md)).

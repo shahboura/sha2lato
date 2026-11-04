@@ -15,10 +15,11 @@ Kimaki is the bot itself ([remorses/kimaki](https://github.com/remorses/kimaki))
 
 | Command | What it does |
 |---|---|
-| `/login`, `/transcription-key` | Connect a model provider / set the voice transcription key |
+| `/login`, `/transcription-key` | Connect a model provider / set the cloud voice transcription key (ignored when `KIMAKI_WHISPER_URL` is set) |
 | `/model`, `/model-variant`, `/agent`, `/verbosity` | Model, thinking level, agent, bot output (session or channel) |
 | `/diff` | Git diff of the session folder as a shareable URL (critique backend) |
-| `/resume`, `/new-session`, `/session-id`, `/cwd` | Session lifecycle — resume, start, locate, change working dir |
+| `/resume`, `/new-session`, `/session-id`, `/cwd` | Session lifecycle — resume, start (without the coordinator), locate, change working dir |
+| `/toggle-coordinator`, `/reset-coordinator` | Coordinator mode per channel (Kimaki 1.5): off/on, or start a fresh coordinator on the next message |
 | `/queue`, `/btw` / `/abort`, `/clear-queue` | Queue work / side question; stop a run / drop the queue |
 | `/undo`, `/redo`, `/compact`, `/context-usage` | History and context tools |
 | `/fork`, `/fork-subagent` / `/new-worktree`, `/merge-worktree`, `/worktrees` | Branch out — fork sessions; worktree lifecycle |
@@ -29,10 +30,13 @@ CLI examples (agent-run in-session, or from the host via `docker compose … exe
 | Command | What it does |
 |---|---|
 | `kimaki status` / `logs -f` / `restart` | Health, log file (follow), restart — sessions keep running |
+| `kimaki -V` / `session compact [id]` | Version / compact a session after its current turn |
 | `kimaki project add /data/projects/app` | Create a channel for a directory |
-| `kimaki session list --all` / `session read <id> --thinking` | Sessions with token counts / transcript as markdown |
+| `kimaki session list --all` / `session read <id>` | Sessions with token counts / prompts + final answers (`--full` every tool call, `--thinking` tools + reasoning) |
+| `kimaki session wait <id…>` / `send --wait [s]` | Wait for one or many sessions (finished/paused headers) / optional bound (bare `--wait` waits up to 1 day) |
 | `kimaki session diff` / `session command <name>` | Publish the session git diff / run a command, skill, or MCP prompt |
 | `kimaki tunnel -- pnpm dev` | Expose a local port with a public URL |
+| `kimaki diagram flow.mmd -o flow.png` | Render Mermaid to a PNG for Discord (`--dark` optional; >= 1.5) |
 | `kimaki sleep --duration 2h --reason "watch deploy"` / `routine list` | Wake later / scheduled prompts (`run <id>` runs one now) |
 | `kimaki upload-to-discord <files…>` | Attach local files to the thread |
 

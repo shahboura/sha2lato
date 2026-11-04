@@ -125,3 +125,4 @@ Everything this repo builds or runs is pinned or first-party, and was verified a
 - **Release automation**: [release-please-action](https://github.com/googleapis/release-please-action) (Apache-2.0) — turns Conventional Commits into release PRs, tags, and GitHub Releases ([versioning.md](versioning.md)); consumed as a pinned action tag, refreshed by Renovate.
 - **Forgejo job image**: Docker Official `node:24-bookworm` + Docker's apt repo (official-only reference); community act image documented as an alternative.
 - **Optional GitHub runner**: [myoung34/github-runner](https://github.com/myoung34/docker-github-actions-runner) (GPL-3.0 — user-pulled image, not redistributed).
+- **Optional local Whisper**: [speaches-ai/speaches](https://github.com/speaches-ai/speaches) (MIT — third-party image, pinned `tag@digest`, profile-gated; model weights are fetched once from Hugging Face into a volume and are not redistributed).
