@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.0](https://github.com/shahboura/sha2lato/compare/v1.3.0...v1.4.0) (2026-11-04)
+
+
+### Features
+
+* adopt kimaki 1.5 and add optional local whisper ([87ffe52](https://github.com/shahboura/sha2lato/commit/87ffe52cecbce4008c9bac680647f174c516a398))
+
 ## [1.3.0](https://github.com/shahboura/sha2lato/compare/v1.2.4...v1.3.0) (2026-10-31)
 
 
