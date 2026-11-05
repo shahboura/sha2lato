@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.5.0](https://github.com/shahboura/sha2lato/compare/v1.4.0...v1.5.0) (2026-11-05)
+
+
+### Features
+
+* make kimaki coordinator mode opt-in ([79c5d8d](https://github.com/shahboura/sha2lato/commit/79c5d8dc2d5ecb82a324ebebc6545b0d636deba6))
+
 ## [1.4.0](https://github.com/shahboura/sha2lato/compare/v1.3.0...v1.4.0) (2026-11-04)
 
 
