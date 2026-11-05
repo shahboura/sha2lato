@@ -466,6 +466,11 @@ set -- kimaki --data-dir "$DATA_DIR" --machine-name "$MACHINE_NAME"
 if [ -n "$KIMAKI_WORKTREES" ]; then
   set -- "$@" --worktrees
 fi
+# Coordinator mode is opt-in: a channel message opens a thread by default.
+# /toggle-coordinator still switches one channel at runtime.
+if [ "${KIMAKI_COORDINATOR:-0}" != "1" ]; then
+  set -- "$@" --coordinator false
+fi
 # Diffs stay in chat by default. With a self-hosted critique configured, keep
 # kimaki's diff workflow (publish a link each time) — the links stay in-house.
 # Needs kimaki >= 1.4 (--disable-prompt); the image installs latest.

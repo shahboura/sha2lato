@@ -44,6 +44,7 @@ Everything else in the repo is impersonal — fork-safe by design ([secrets.md](
 | `CRITIQUE_VERSION` | empty (→ latest) | critique CLI release to run: bare or `latest` resolves the fork's newest release on every container start (installed into the volume, sha256-verified); pin an exact `x.y.z` to freeze it. No cache + no network leaves `/diff` without a backend until a start succeeds |
 | `SUPERPOWERS_DISABLE_TELEMETRY` | `1` (off) | set `0` to allow the version-only telemetry ping |
 | `KIMAKI_WORKTREES` | empty (off) | `1` = fresh git worktree per session — **leave empty when superpowers is active** |
+| `KIMAKI_COORDINATOR` | empty (off) | `1` = each project channel becomes one long-lived coordinator session that starts worker threads (Kimaki 1.5); off by default, so a channel message opens a thread. `/toggle-coordinator` switches one channel either way |
 | `KIMAKI_WHISPER_URL` | empty (→ cloud) | base URL of a Whisper server (`/v1`), e.g. `http://whisper:8000/v1`. When set it is the **only** voice transcriber — no cloud fallback ([Local Whisper](#local-whisper-optional)) |
 | `KIMAKI_WHISPER_MODEL` | `whisper-1` | model ID sent to the Whisper server (Hugging Face repo for speaches, e.g. `Systran/faster-whisper-small`) |
 | `KIMAKI_WHISPER_API_KEY` | empty | bearer token for the Whisper server, if it requires one |

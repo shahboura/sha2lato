@@ -71,8 +71,8 @@ playwright CLI + chromium deps, gh), compose stack (agent + DinD + optional
 local Whisper via the `whisper` profile, explicit volume names), secrets + age
 overlay, GitHub + Forgejo CI (multi-arch, weekly rebuild, fork-safe), host
 bootstrap/update/configure scripts, and scoped docs. Kimaki 1.5 is the runtime
-(coordinator channels, `kimaki diagram`, local-Whisper client); the weekly
-rebuild tracks `KIMAKI_VERSION=latest`.
+(coordinator opt-in via `KIMAKI_COORDINATOR=1`, `kimaki diagram`,
+local-Whisper client); the weekly rebuild tracks `KIMAKI_VERSION=latest`.
 A docs website (`website/`, Holocron) renders from the same `README.md` +
 `docs/*.md` and deploys to Cloudflare Workers when the CF secrets are set
 (optional, fork-safe; upstream instance live at `sha2lato.elkodr.com`);
@@ -185,6 +185,11 @@ entry per session here.
   on-box, model weights download once. Env examples + docs updated; the
   profile is enabled by hand in `compose/.env`; no coordinator env knob
   (per-channel `/toggle-coordinator`).
+- **2026-11-05 (session 12):** Coordinator mode is now opt-in. The entrypoint
+  passes `--coordinator false` unless `KIMAKI_COORDINATOR=1`, so a channel
+  message opens a thread and Kimaki 1.5 onboards in a `Kimaki onboarding`
+  thread under `#kimaki`; `/toggle-coordinator` still enables one channel.
+  Docs + env template updated.
 - **Open:** deploy the rebuilt image; retest `upload-to-discord` on kimaki
   1.2.0; file the drafted kimaki issues (tunnel DNS, upload bug); Forgejo
   runner leg; verify self-hosted critique uploads once `diff.<domain>`
