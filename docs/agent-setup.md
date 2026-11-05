@@ -132,13 +132,13 @@ If the category does not appear within a minute (the bot was invited after its f
 docker compose -f compose/docker-compose.yml restart agent
 ```
 
-**Verify:** the Discord server now shows a category **`Kimaki <MACHINE_NAME>`** with a `#kimaki` channel (with coordinator mode on — the box's default — Kimaki 1.5 onboards in the channel, not a thread).
+**Verify:** the Discord server now shows a category **`Kimaki <MACHINE_NAME>`** with a `#kimaki` channel and a **`Kimaki onboarding`** thread under it (coordinator mode is off by default, so Kimaki 1.5 onboards in a thread).
 
 **On failure:** [troubleshooting.md → Agent / bot](troubleshooting.md#agent--bot).
 
 ### 7. HUMAN — connect a model
 
-The user runs **`/login`** in any channel and connects Claude Pro/Max, ChatGPT, Gemini, or an API key. Then ask them to send a message in `#kimaki` (e.g. “reply with a one-line hello”) — it should answer in the channel (Kimaki 1.5 coordinator mode; `/toggle-coordinator` switches a channel back to thread-per-message).
+The user runs **`/login`** in any channel and connects Claude Pro/Max, ChatGPT, Gemini, or an API key. Then ask them to send a message in `#kimaki` (e.g. “reply with a one-line hello”) — it should open a thread and answer there (coordinator mode is opt-in with `KIMAKI_COORDINATOR=1`; `/toggle-coordinator` switches one channel to channel chat).
 
 **Verify:** the agent replies. Auth/model errors despite a valid token? Check `secrets/.env.agent` for CRLF line endings ([troubleshooting.md → Agent / bot](troubleshooting.md#agent--bot)).
 
@@ -159,4 +159,4 @@ The user runs **`/login`** in any channel and connects Claude Pro/Max, ChatGPT, 
 | No published ports | `docker compose -f compose/docker-compose.yml ps` | ports column empty |
 | Bot running | `docker compose -f compose/docker-compose.yml exec agent kimaki status` | reports the bot |
 | Category exists | in Discord | `Kimaki <MACHINE_NAME>` + `#kimaki` |
-| End to end | send a message in `#kimaki` | a reply lands (channel-level coordinator in Kimaki 1.5; `/toggle-coordinator` for thread-per-message) |
+| End to end | send a message in `#kimaki` | a thread opens and a reply lands (coordinator off by default; `KIMAKI_COORDINATOR=1` or `/toggle-coordinator` enables channel chat) |

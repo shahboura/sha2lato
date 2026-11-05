@@ -1,10 +1,10 @@
 # Usage — day 2 from your phone
 
-The mental model: **channels are projects, threads are sessions** — and since Kimaki 1.5 a channel is also a chat with one long-lived **coordinator** session that delegates work to threads.
+The mental model: **channels are projects, threads are sessions**. Send a message in a project channel and Kimaki opens a **thread** with one OpenCode session working in that project's directory. Kimaki 1.5's channel **coordinator** is opt-in: set `KIMAKI_COORDINATOR=1` in `secrets/.env.agent` (then `up -d`) to make each channel one long-lived session that starts a thread per piece of work, or toggle it per channel with `/toggle-coordinator`.
 
-- Send a message in a project channel → the coordinator answers there and starts a **thread** per piece of work; each thread is one OpenCode session working in that project's directory.
-- `/new-session` starts a thread without the coordinator; `/toggle-coordinator` switches coordinator mode off for that channel; `/reset-coordinator` starts a fresh coordinator on the next message.
-- Return to any thread anytime (search, `/resume`) — or start a new one with `/new-session`.
+- A channel message opens a thread; `/new-session` starts another one.
+- `/toggle-coordinator` turns the channel chat on or off; `/reset-coordinator` starts a fresh coordinator on the next message.
+- Return to any thread anytime (search, `/resume`).
 - Everything the agent does (reads, edits, test runs, docker builds) happens on **your** host, inside the agent container and its DinD sidecar.
 
 ## First steps in Discord

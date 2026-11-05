@@ -18,8 +18,8 @@ Kimaki is the bot itself ([remorses/kimaki](https://github.com/remorses/kimaki))
 | `/login`, `/transcription-key` | Connect a model provider / set the cloud voice transcription key (ignored when `KIMAKI_WHISPER_URL` is set) |
 | `/model`, `/model-variant`, `/agent`, `/verbosity` | Model, thinking level, agent, bot output (session or channel) |
 | `/diff` | Git diff of the session folder as a shareable URL (critique backend) |
-| `/resume`, `/new-session`, `/session-id`, `/cwd` | Session lifecycle — resume, start (without the coordinator), locate, change working dir |
-| `/toggle-coordinator`, `/reset-coordinator` | Coordinator mode per channel (Kimaki 1.5): off/on, or start a fresh coordinator on the next message |
+| `/resume`, `/new-session`, `/session-id`, `/cwd` | Session lifecycle — resume, start a thread, locate, change working dir |
+| `/toggle-coordinator`, `/reset-coordinator` | Coordinator mode per channel (Kimaki 1.5, opt-in via `KIMAKI_COORDINATOR=1`): off/on, or start a fresh coordinator on the next message |
 | `/queue`, `/btw` / `/abort`, `/clear-queue` | Queue work / side question; stop a run / drop the queue |
 | `/undo`, `/redo`, `/compact`, `/context-usage` | History and context tools |
 | `/fork`, `/fork-subagent` / `/new-worktree`, `/merge-worktree`, `/worktrees` | Branch out — fork sessions; worktree lifecycle |
